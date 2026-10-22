@@ -80,6 +80,17 @@
   --wb-body: color-mix(in srgb, var(--dsw-alias-label-secondary) 92%, var(--dsw-alias-bg-base));
 
   /*
+   * The expanded summary's scrollbar (§9.31.9).
+   *
+   * Its own tokens rather than reused ink: a thumb is a control, not text, so it
+   * sits between the border tier and the caption tier and has a hover step. Kept
+   * as `color-mix` over the theme's ink, which means both themes get a thumb that
+   * is dark-on-light and light-on-dark without a second rule.
+   */
+  --wb-scroll-thumb: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  --wb-scroll-thumb-hover: color-mix(in srgb, var(--dsw-alias-label-primary) 30%, transparent);
+
+  /*
    * Elevation only: the card now draws its own 0.5px border, so a ring inside the
    * shadow would double it. Two layers, as the reference card has them: a tight
    * contact shadow and a wide, very faint one that lets the card sit on the
@@ -1225,6 +1236,42 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
      area with `overflow-y: auto` would flash its own scrollbar mid-fold. */
   overflow-y: auto;
   overflow-x: clip;
+  /* §9.31.9: the bar is a permanent fixture of the section, not an overlay that
+     materialises on hover. `scrollbar-gutter: stable` reserves the lane whether
+     or not the content overflows, so a summary that grows past the cap does not
+     reflow its own text at the moment the bar appears; the explicit
+     `::-webkit-scrollbar` rules then pin a thin, always-drawn thumb instead of
+     whatever the host's overlay style would do.
+     Deliberately no `scrollbar-width` / `scrollbar-color`: Chrome prefers those
+     standard properties when present and then ignores the `::-webkit-scrollbar`
+     block below, which is how the track keeps its rounded thumb. Nothing here
+     runs outside Chromium, so the webkit path is the only path. */
+  scrollbar-gutter: stable;
+}
+
+.detailOpen > .detail::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.detailOpen > .detail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detailOpen > .detail::-webkit-scrollbar-thumb {
+  background: var(--wb-scroll-thumb);
+  border-radius: 3px;
+}
+
+.detailOpen > .detail::-webkit-scrollbar-thumb:hover {
+  background: var(--wb-scroll-thumb-hover);
+}
+
+/* A corner appears when both bars are drawn; the section never scrolls sideways
+   (`overflow-x: clip`), so this only exists to keep the theme from painting a
+   square of its own there. */
+.detailOpen > .detail::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* The expanded area spans the card now that its delete row is gone (§9.31): it

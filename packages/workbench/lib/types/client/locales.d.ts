@@ -58,7 +58,6 @@ export declare const zh: {
     readonly 'writeback.request': "待办总结";
     readonly 'writeback.retry': "待办总结 · 重新写回";
     readonly 'writeback.pending': "已发送，等待模型写回…";
-    readonly 'writeback.hintQueued': "写回后本条自动完结";
     readonly 'writeback.hintRunning': "进行中 · 可再次写回";
     readonly 'writeback.failed': "写回请求未能发出：{message}";
     readonly 'writeback.noSession': "当前会话不可用，请重新打开后再试";

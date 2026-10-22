@@ -61,7 +61,7 @@ const icon = {
 }
 
 /** One card, in the states the component can draw. */
-function card({ status = 'open', title, desc, tag = '', time = '刚刚', archived = false, fill = true, pending = false, open = false, empty = false }) {
+function card({ status = 'open', title, desc, tag = '', time = '刚刚', archived = false, fill = true, pending = false, open = false, empty = false, long = false }) {
   const done = status === 'done'
   const busy = status === 'in_progress'
   return `
@@ -103,7 +103,9 @@ function card({ status = 'open', title, desc, tag = '', time = '刚刚', archive
         <div class="${cls('completionDivider')}">待办总结</div>
         ${empty
     ? `<div class="${cls('detailEmpty')}">${icon.empty}</div>`
-    : `<p class="${cls('completionSummary')}">整理官网改版的需求边界，输出方案初稿：信息架构、页面清单与两周排期。</p>
+    : `${long
+      ? Array.from({ length: 9 }, (_, i) => `<p class="${cls('completionSummary')}">${i + 1}. 这一段只是把摘要撑到超过展开区的限高，用来看滚动条是不是一直在。</p>`).join('')
+      : `<p class="${cls('completionSummary')}">整理官网改版的需求边界，输出方案初稿：信息架构、页面清单与两周排期。</p>`}
         <div class="${cls('completionBlock')}">
           <p class="${cls('completionBlockTitle')}">实现路径</p>
           <ol class="${cls('completionSteps')}"><li>梳理现有导航与页面清单</li><li>产出方案初稿并评审</li></ol>
@@ -197,6 +199,17 @@ const archived = card({
   archived: true,
 })
 
+/** A summary that overflows the cap: the expanded area's own scrollbar, always drawn. */
+const scrolled = card({
+  status: 'done',
+  title: '长总结的展开区',
+  desc: '摘要超过限高，展开区自己滚。',
+  tag: 'DSH 插件',
+  time: '昨天',
+  open: true,
+  long: true,
+})
+
 const column = (body, theme, width = 380, height = 420) => `
   <section class="col" data-theme="${theme}" style="width:${width + 32}px">
     <p class="colTitle">${theme === 'light' ? '浅色' : '深色'} · 面板 ${width}px</p>
@@ -225,7 +238,7 @@ const html = `<!doctype html>
 </head>
 <body>
   <div class="cols">
-    ${column(cards, 'light')}
+    ${column(cards + scrolled, 'light', 380, 620)}
     ${column(composer + busy + openCards + archived, 'light', 380, 860)}
     ${column(composer + cards + busy, 'dark', 380, 620)}
   </div>

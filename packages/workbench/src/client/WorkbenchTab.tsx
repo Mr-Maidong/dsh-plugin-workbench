@@ -833,12 +833,13 @@ function Card({
                 is drawn while the write-back is still pending, while it is queued
                 and while it is running — but no longer for a finished card
                 (§9.25): its status word and completion record already say
-                everything that narration would repeat. */}
-            {item.status !== 'done' && (
+                everything that narration would repeat. Nor for an idle open item
+                (§9.31.9): "写回后本条自动完结" explained a rule that the empty icon
+                above it already implies, and it sat under every untouched card's
+                expanded area as the only thing there. */}
+            {(pending || item.status === 'in_progress') && (
               <p className={css.detailHint}>
-                {t(pending
-                  ? 'writeback.pending'
-                  : item.status === 'in_progress' ? 'writeback.hintRunning' : 'writeback.hintQueued')}
+                {t(pending ? 'writeback.pending' : 'writeback.hintRunning')}
               </p>
             )}
             {/* The prototype's `.detailBar` is gone (§9.31): its only control was

@@ -222,7 +222,7 @@ describe('write-back wiring', () => {
   it('names every write-back string in both locales', () => {
     for (const key of [
       'writeback.request', 'writeback.retry', 'writeback.pending',
-      'writeback.hintQueued', 'writeback.hintRunning', 'writeback.failed',
+      'writeback.hintRunning', 'writeback.failed',
       'writeback.noSession',
     ]) {
       const occurrences = locales.split(`'${key}'`).length - 1
@@ -232,6 +232,8 @@ describe('write-back wiring', () => {
     // word and completion record already say it — so the hint key itself is
     // retired, not merely unreferenced, and must not quietly come back.
     assert.ok(!locales.includes('writeback.hintDone'), 'the done narration is retired (§9.25)')
+    // §9.31.9: same for the idle hint under an untouched item's expanded area.
+    assert.ok(!locales.includes('writeback.hintQueued'), 'the queued narration is retired (§9.31.9)')
   })
 
   it('draws the hint, and holds the pending pulse still under reduced motion', () => {

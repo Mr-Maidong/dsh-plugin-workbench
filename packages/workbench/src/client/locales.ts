@@ -82,8 +82,11 @@ export const zh = {
   // a state its label cannot carry on its own — sent, waiting for the model — and
   // the expanded area explains what each status will do. The failure text is the
   // one place the reason a request never reached the model is reported.
+  // The idle "the write-back completes this item" hint is retired too (§9.31.9):
+  // it was the only thing drawn under an untouched item's expanded area, and it
+  // explained a rule nobody asked about while the empty icon already said the
+  // section was empty. Its key is gone from both locales, not just unreferenced.
   'writeback.pending': '已发送，等待模型写回…',
-  'writeback.hintQueued': '写回后本条自动完结',
   'writeback.hintRunning': '进行中 · 可再次写回',
   'writeback.failed': '写回请求未能发出：{message}',
   'writeback.noSession': '当前会话不可用，请重新打开后再试',
@@ -188,7 +191,6 @@ export const en: Record<WorkbenchLocaleKey, string> = {
   'writeback.request': 'To-do summary',
   'writeback.retry': 'To-do summary · write back again',
   'writeback.pending': 'Sent, waiting for the model…',
-  'writeback.hintQueued': 'The write-back completes this item',
   'writeback.hintRunning': 'In progress · can be written back again',
   'writeback.failed': 'The write-back request could not be sent: {message}',
   'writeback.noSession': 'This session is not available; reopen it and try again',

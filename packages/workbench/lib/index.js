@@ -327,6 +327,7 @@ let WorkbenchService = (() => {
 	let _setDesc_decorators;
 	let _update_decorators;
 	let _requestComplete_decorators;
+	let _archive_decorators;
 	let _delete_decorators;
 	return class WorkbenchService extends _classSuper {
 		static {
@@ -337,6 +338,7 @@ let WorkbenchService = (() => {
 			_setDesc_decorators = [Remote("setDesc")];
 			_update_decorators = [Remote("update")];
 			_requestComplete_decorators = [Remote("requestComplete")];
+			_archive_decorators = [Remote("archive")];
 			_delete_decorators = [Remote("delete")];
 			__esDecorate(this, null, _probe_decorators, {
 				kind: "method",
@@ -401,6 +403,17 @@ let WorkbenchService = (() => {
 				access: {
 					has: (obj) => "requestComplete" in obj,
 					get: (obj) => obj.requestComplete
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _archive_decorators, {
+				kind: "method",
+				name: "archive",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "archive" in obj,
+					get: (obj) => obj.archive
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -828,6 +841,52 @@ let WorkbenchService = (() => {
 			});
 			if (result.code === "ok") this.armWriteBack(request.id, result.item.updateAt);
 			return result;
+		}
+		/**
+		* File one work item away, or bring it back (§4.7, §9.31).
+		*
+		* §4.7 gave `archived` one producer — a deleted workspace left its items behind
+		* as the record of what was asked for there — and this plugin had not
+		* implemented that yet, so nothing could reach the 已归档 tier. The user's own
+		* 归档 button is now the first producer, and it shares the field with that
+		* future one: an archived item is out of the three daily tiers and inside
+		* 已归档, whatever the reason it got there. Nothing is destroyed, which is
+		* exactly why the control needs no confirmation and why it can be undone from
+		* the same button.
+		*
+		* `archivedAt` is stamped on the way in and dropped on the way out, so the
+		* field never describes a moment that no longer applies. A no-op request (the
+		* item is already in the asked-for state) still returns the record, but writes
+		* nothing: pressing a toggle twice must not make the list look fresher than it
+		* is.
+		* @param request - target item, the state to move to, and the version last seen.
+		* @returns the record after the change, `conflict` on a stale version, or `invalid`.
+		* @throws when the domain could not be opened.
+		*/
+		async archive(request) {
+			const invalid = this.rejectUnknownWorkspace(request.workspaceId);
+			if (invalid !== void 0) return invalid;
+			const observed = (await this.table()).get(request.id);
+			if (observed === void 0 || observed.workspaceId !== request.workspaceId) return {
+				code: "not_found",
+				id: request.id
+			};
+			if (observed.archived === request.archived) return {
+				code: "ok",
+				item: observed
+			};
+			return this.mutate(request, (current) => {
+				if (request.archived) return {
+					...current,
+					archived: true,
+					archivedAt: nowInstant()
+				};
+				const { archivedAt, ...rest } = current;
+				return {
+					...rest,
+					archived: false
+				};
+			});
 		}
 		/**
 		* Delete one work item.

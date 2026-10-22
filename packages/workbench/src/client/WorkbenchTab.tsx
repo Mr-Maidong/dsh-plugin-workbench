@@ -365,18 +365,16 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
   }
 
   /**
-   * Delete one item, after asking.
+   * File one item away, or bring it back (§9.31).
    *
-   * Deletion is the only irreversible thing this pane offers — everything else is
-   * an edit to a record that keeps its identity — so it is the one action that
-   * gets a confirmation. The text names the title, because a list of similar
-   * items is exactly where a misclick happens.
-   * @param item - the record to delete.
+   * No confirmation, and no `window.confirm`: archiving destroys nothing and the
+   * same control reverses it, which is precisely the property the delete button
+   * it replaced did not have.
+   * @param item - the record to archive or restore.
    */
-  const removeItem = async (item: WorkItemRecord): Promise<void> => {
-    if (!window.confirm(t('action.deleteConfirm', { title: item.title }))) return
+  const archiveItem = async (item: WorkItemRecord): Promise<void> => {
     setNotice(undefined)
-    const result = await store.remove(item.id)
+    const result = await store.setArchived(item, !item.archived)
     if (result.code !== 'ok') report(result)
   }
 
@@ -538,9 +536,8 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
                   onCommit={(field, draft) => { void commit(item, field, draft) }}
                   onCancel={() => { setEditing({ kind: 'none' }) }}
                   onToggle={() => { toggleExpanded(item.id) }}
-                  onDelete={() => { void removeItem(item) }}
-                  onRequestComplete={() => { void requestWriteBack(item) }}
-                  onFill={canFill ? () => { fillComposer(item) } : undefined}
+                  onArchive={() => { void archiveItem(item) }}
+                  onRequestComplete={() => { void requestWriteBack(item) }}                  onFill={canFill ? () => { fillComposer(item) } : undefined}
                 />
               ))}
             </ul>
@@ -567,7 +564,7 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
                       onCommit={(field, draft) => { void commit(item, field, draft) }}
                       onCancel={() => { setEditing({ kind: 'none' }) }}
                       onToggle={() => { toggleExpanded(item.id) }}
-                      onDelete={() => { void removeItem(item) }}
+                      onArchive={() => { void archiveItem(item) }}
                       onRequestComplete={() => { void requestWriteBack(item) }}
                       onFill={canFill ? () => { fillComposer(item) } : undefined}
                     />
@@ -603,7 +600,13 @@ interface CardProps {
   readonly onCommit: (field: 'title' | 'desc' | 'tag', draft: string) => void
   readonly onCancel: () => void
   readonly onToggle: () => void
-  readonly onDelete: () => void
+  /**
+   * File this item away, or bring it back (§9.31).
+   *
+   * Required, like the write-back: the pane always exposes the call, and the
+   * card reads its own `archived` flag for which of the two verbs to draw.
+   */
+  readonly onArchive: () => void
   /**
    * Ask for a write-back on this item (DESIGN.md §4.5). Required, like delete: the
    * pane always exposes the call, and the card decides which of the states the
@@ -619,7 +622,7 @@ interface CardProps {
 
 /** One work item. */
 function Card({
-  item, t, editing, open, pending = false, onEdit, onCommit, onCancel, onToggle, onDelete, onRequestComplete, onFill,
+  item, t, editing, open, pending = false, onEdit, onCommit, onCancel, onToggle, onArchive, onRequestComplete, onFill,
 }: CardProps): ReactNode {
   const isEditing = (field: 'title' | 'desc' | 'tag'): boolean =>
     editing.kind === 'field' && editing.id === item.id && editing.field === field
@@ -781,6 +784,22 @@ function Card({
               </button>
             )}
             <span className={css.footSpacer} />
+            {/* Archiving closes the actions cluster, where the reference design
+                leaves room for one more control (§9.31). It replaced the delete
+                button that used to sit in the open card's corner: filing an item
+                away is reversible — the same button brings it back — so it can
+                live in the row that needs no confirmation, while a destructive
+                removal could not. */}
+            <button
+              type="button"
+              className={item.archived ? `${css.archiveBtn} ${css.archiveBtnOn}` : css.archiveBtn}
+              title={t(item.archived ? 'card.unarchive' : 'card.archive')}
+              aria-label={t(item.archived ? 'card.unarchive' : 'card.archive')}
+              onClick={onArchive}
+            >
+              <ArchiveGlyph />
+              <span>{t(item.archived ? 'card.unarchive' : 'card.archive')}</span>
+            </button>
             <span className={css.cardActions}>
               <button
                 type="button"
@@ -808,7 +827,7 @@ function Card({
                 line does not appear and disappear with the content behind it. */}
             <div className={css.completionDivider}>{t('completion.title')}</div>
             {item.completion === undefined
-              ? <p className={css.detailEmpty}>{t('detail.noCompletion')}</p>
+              ? <CompletionEmpty t={t} />
               : <Completion item={item} t={t} />}
             {/* §9.19: the write-back's next step, in the control's own words. It
                 is drawn while the write-back is still pending, while it is queued
@@ -822,26 +841,35 @@ function Card({
                   : item.status === 'in_progress' ? 'writeback.hintRunning' : 'writeback.hintQueued')}
               </p>
             )}
-            {/* The prototype's `.detailBar` keeps only its trailing control now: the
-                write-back request moved up to the heading line (§9.13), which leaves
-                the open card's bottom-right corner to delete — where the prototype
-                puts it, and where a destructive control belongs, since reaching it
-                still takes opening the card and a confirmation on top. */}
-            <div className={css.detailBar}>
-              <button
-                type="button"
-                className={css.detailDelete}
-                title={t('action.delete')}
-                aria-label={t('action.delete')}
-                onClick={onDelete}
-              >
-                <TrashGlyph />
-              </button>
-            </div>
+            {/* The prototype's `.detailBar` is gone (§9.31): its only control was
+                delete, which moved out of the expanded area entirely once
+                archiving replaced it. The empty region stays declared so the fold
+                keeps one closing edge. */}
           </div>
 
       </div>
     </li>
+  )
+}
+
+/**
+ * The expanded area with nothing written back yet (§9.31).
+ *
+ * One icon, no sentence: the divider above it already says 待办总结, so a line of
+ * copy underneath only restates the heading and the rule. The words survive as
+ * the icon's accessible name, which is where they still earn their keep.
+ */
+function CompletionEmpty({ t }: { readonly t: CardProps['t'] }): ReactNode {
+  return (
+    <div className={css.detailEmpty} role="img" aria-label={t('detail.noCompletion')}>
+      {/* The list's own empty mark — a sheet with a line on it — drawn without
+          `css.emptyGlyph`, whose 14px bottom margin belongs to the block layout
+          it was written for. */}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="3" y="4.5" width="18" height="15" rx="4" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M3 9.5h18M7.5 14h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+    </div>
   )
 }
 
@@ -1090,7 +1118,7 @@ function ChevronGlyph(): ReactNode {
  */
 function CalendarGlyph(): ReactNode {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <rect x="2.3" y="3.6" width="11.4" height="10" rx="2.6" stroke="currentColor" strokeWidth="1.4" />
       <path d="M2.3 6.9h11.4M5.8 2.4v2.3M10.2 2.4v2.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
@@ -1159,31 +1187,38 @@ function SummaryGlyph(): ReactNode {
   )
 }
 
-/** Delete: a lidded bin, drawn at the fill glyph's weight so the pair matches. */
-function TrashGlyph(): ReactNode {
+/**
+ * Archive: a box with its lid laid flat and an arrow dropping into it (§9.31).
+ *
+ * Drawn at the same 13px/stroke-1.4 weight as the row's other glyphs, so the
+ * control that replaced delete does not read as a different kind of thing.
+ */
+function ArchiveGlyph(): ReactNode {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M2.8 4.4h10.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path
-        d="M6.4 4.4V3.1a.7.7 0 0 1 .7-.7h1.8a.7.7 0 0 1 .7.7v1.3"
+      <rect
+        x="2.4"
+        y="3"
+        width="11.2"
+        height="3.1"
+        rx="1"
         stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
+        strokeWidth="1.3"
         strokeLinejoin="round"
       />
       <path
-        d="M4.3 4.4l.5 7.8a1.5 1.5 0 0 0 1.5 1.4h3.4a1.5 1.5 0 0 0 1.5-1.4l.5-7.8"
+        d="M3.5 6.1v5.4a1.4 1.4 0 0 0 1.4 1.4h6.2a1.4 1.4 0 0 0 1.4-1.4V6.1"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M6.7 6.9v3.9M9.3 6.9v3.9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M8 8.2v3.4M6.5 10.1L8 11.6l1.5-1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-/** The empty state's mark: a sheet with a line of text, above the sentence. */
+/** The empty completion state: a sheet with nothing written on it (§9.31). */
 function EmptyGlyph(): ReactNode {
   return (
     <svg className={css.emptyGlyph} width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">

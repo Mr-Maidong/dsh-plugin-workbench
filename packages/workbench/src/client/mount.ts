@@ -137,6 +137,7 @@ function registerUi(ctx: Context): void {
     create: async request => unwrap(await ctx.remote.workbench.create(request)),
     setDesc: async request => unwrap(await ctx.remote.workbench.setDesc(request)),
     update: async request => unwrap(await ctx.remote.workbench.update(request)),
+    archive: async request => unwrap(await ctx.remote.workbench.archive(request)),
     requestComplete: async request => unwrap(await ctx.remote.workbench.requestComplete(request)),
     delete: async request => unwrap(await ctx.remote.workbench.delete(request)),
   }

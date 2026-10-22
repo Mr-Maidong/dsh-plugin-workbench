@@ -85,7 +85,13 @@ export interface WorkItemRecord {
   readonly tag: string
   readonly status: WorkItemStatus
   /**
-   * The owning workspace was deleted and this item was archived (DESIGN.md §4.7).
+   * Filed away: out of the three daily tiers and inside 已归档 (DESIGN.md §4.7,
+   * §9.31).
+   *
+   * Two things set it, and the field does not distinguish them — §4.7's original
+   * case (the owning workspace was deleted, which is why the path snapshot above
+   * exists) and, since §9.31, the user's own 归档 button, which the same button
+   * reverses.
    *
    * Orthogonal to `status`, not a fourth value: an archived `open` item is
    * still editable and still writable back, and an archived `done` item is
@@ -233,6 +239,22 @@ export interface WorkbenchRequestCompleteRequest {
    * only: an item that is already `in_progress` is a retry, and a retry that
    * could conflict would fight the write it is retrying (§4.5).
    */
+  readonly expectedUpdateAt?: string
+}
+
+/**
+ * Put one work item away, or take it back out (DESIGN.md §4.7, §9.31).
+ *
+ * Archiving is the user's own filing decision, and it is reversible, which is
+ * what lets the pane offer it as a plain button: nothing is destroyed, the item
+ * only leaves the three daily tiers and turns up under 已归档.
+ */
+export interface WorkbenchArchiveRequest {
+  readonly workspaceId: string
+  readonly id: WorkItemId
+  /** `true` files the item away; `false` brings it back. */
+  readonly archived: boolean
+  /** Last observed `updateAt`; a mismatch yields `conflict` rather than a blind write. */
   readonly expectedUpdateAt?: string
 }
 

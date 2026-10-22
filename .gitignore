@@ -11,3 +11,10 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+
+# Sandbox ACL diagnostics (tool output, never a deliverable) and the generated
+# preview page plus its scratch screenshots: `repro/card-preview.mjs` writes the
+# HTML from the built bundle, so it is reproducible and not committed.
+.acl-reports/
+repro/card-preview.html
+repro/*.png

@@ -10,7 +10,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
-import type { WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchProbeValue, WorkbenchRequestCompleteRequest, WorkbenchSearchRequest, WorkbenchSearchValue, WorkbenchSetDescRequest, WorkbenchUpdateRequest, WorkbenchWriteValue } from './types.ts';
+import type { WorkbenchArchiveRequest, WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchProbeValue, WorkbenchRequestCompleteRequest, WorkbenchSearchRequest, WorkbenchSearchValue, WorkbenchSetDescRequest, WorkbenchUpdateRequest, WorkbenchWriteValue } from './types.ts';
 export type * from './types.ts';
 declare module '@deepseek-ai/cordis' {
     interface Context {
@@ -147,6 +147,28 @@ export declare class WorkbenchService extends TypertRemoteService {
      * @throws when the domain could not be opened.
      */
     requestComplete(request: WorkbenchRequestCompleteRequest): Promise<WorkbenchWriteValue>;
+    /**
+     * File one work item away, or bring it back (§4.7, §9.31).
+     *
+     * §4.7 gave `archived` one producer — a deleted workspace left its items behind
+     * as the record of what was asked for there — and this plugin had not
+     * implemented that yet, so nothing could reach the 已归档 tier. The user's own
+     * 归档 button is now the first producer, and it shares the field with that
+     * future one: an archived item is out of the three daily tiers and inside
+     * 已归档, whatever the reason it got there. Nothing is destroyed, which is
+     * exactly why the control needs no confirmation and why it can be undone from
+     * the same button.
+     *
+     * `archivedAt` is stamped on the way in and dropped on the way out, so the
+     * field never describes a moment that no longer applies. A no-op request (the
+     * item is already in the asked-for state) still returns the record, but writes
+     * nothing: pressing a toggle twice must not make the list look fresher than it
+     * is.
+     * @param request - target item, the state to move to, and the version last seen.
+     * @returns the record after the change, `conflict` on a stale version, or `invalid`.
+     * @throws when the domain could not be opened.
+     */
+    archive(request: WorkbenchArchiveRequest): Promise<WorkbenchWriteValue>;
     /**
      * Delete one work item.
      *

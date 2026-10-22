@@ -49,6 +49,8 @@ export declare const zh: {
     readonly 'card.fillTitle': "把这条工作项填入对话框输入框";
     readonly 'card.fill': "发送";
     readonly 'card.summarize': "总结";
+    readonly 'card.archive': "归档";
+    readonly 'card.unarchive': "取消归档";
     readonly 'group.active': "未完成";
     readonly 'group.done': "已完成";
     readonly 'group.archived': "已归档";

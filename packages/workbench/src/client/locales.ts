@@ -60,6 +60,8 @@ export const zh = {
   'card.fillTitle': '把这条工作项填入对话框输入框',
   'card.fill': '发送',
   'card.summarize': '总结',
+  'card.archive': '归档',
+  'card.unarchive': '取消归档',
 
   'group.active': '未完成',
   'group.done': '已完成',
@@ -173,6 +175,8 @@ export const en: Record<WorkbenchLocaleKey, string> = {
   'card.fillTitle': 'Put this work item into the composer input',
   'card.fill': 'Send',
   'card.summarize': 'Summarize',
+  'card.archive': 'Archive',
+  'card.unarchive': 'Restore',
 
   'group.active': 'Open',
   'group.done': 'Done',

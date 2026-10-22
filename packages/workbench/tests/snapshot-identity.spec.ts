@@ -24,6 +24,7 @@ const gateway = {
   create: async request => { throw new Error('spec: unused') },
   setDesc: async request => { throw new Error('spec: unused') },
   update: async request => { throw new Error('spec: unused') },
+  archive: async request => { throw new Error('spec: unused') },
   requestComplete: async request => { throw new Error('spec: unused') },
   delete: async request => { throw new Error('spec: unused') },
 }

@@ -53,14 +53,15 @@ const cls = (...names) => names.flat().filter(Boolean).map(name => {
 const icon = {
   send: `<svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M826.709333 142.336a32 32 0 0 1 46.72 32.128l-78.293333 656.981333a32 32 0 0 1-44.672 25.472l-202.069333-89.130666-106.965334 108.074666a32 32 0 0 1-54.442666-18.133333L386.688 853.333333v-158.805333l-250.453333-131.669333a32 32 0 0 1-4.053334-54.144l4.010667-2.474667z m-28.629333 123.434667l-342.186667 429.397333a32.085333 32.085333 0 0 1-5.12 5.12l-0.085333 75.221333 67.712-68.394666a32 32 0 0 1 31.018667-8.405334l4.650666 1.664 182.613334 80.512 61.397333-515.114666z m-91.562667 12.202666L219.818667 534.485333l198.912 104.618667 287.786666-361.130667z"/></svg>`,
   summary: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3.1" y="2.2" width="9.8" height="11.6" rx="2.3" stroke="currentColor" stroke-width="1.4"/><path d="M5.8 6.1h4.4M5.8 9.7h2.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
-  calendar: `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.3" y="3.6" width="11.4" height="10" rx="2.6" stroke="currentColor" stroke-width="1.4"/><path d="M2.3 6.9h11.4M5.8 2.4v2.3M10.2 2.4v2.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  calendar: `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.3" y="3.6" width="11.4" height="10" rx="2.6" stroke="currentColor" stroke-width="1.4"/><path d="M2.3 6.9h11.4M5.8 2.4v2.3M10.2 2.4v2.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
   check: `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.9" fill="currentColor"/><path d="m5 8.2 2 2 4-4.2" stroke="var(--wb-on-accent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   chevron: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3.6 6.2 4.4 4.4 4.4-4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  trash: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.8 4.4h10.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M6.4 4.4V3.1a.7.7 0 0 1 .7-.7h1.8a.7.7 0 0 1 .7.7v1.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.3 4.4l.5 7.8a1.5 1.5 0 0 0 1.5 1.4h3.4a1.5 1.5 0 0 0 1.5-1.4l.5-7.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.7 6.9v3.9M9.3 6.9v3.9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  archive: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.4" y="3" width="11.2" height="3.1" rx="1" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M3.5 6.1v5.4a1.4 1.4 0 0 0 1.4 1.4h6.2a1.4 1.4 0 0 0 1.4-1.4V6.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 8.2v3.4M6.5 10.1L8 11.6l1.5-1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  empty: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="4" stroke="currentColor" stroke-width="1.3"/><path d="M3 9.5h18M7.5 14h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
 }
 
 /** One card, in the states the component can draw. */
-function card({ status = 'open', title, desc, tag = '', time = '刚刚', archived = false, fill = true, pending = false, open = false }) {
+function card({ status = 'open', title, desc, tag = '', time = '刚刚', archived = false, fill = true, pending = false, open = false, empty = false }) {
   const done = status === 'done'
   const busy = status === 'in_progress'
   return `
@@ -86,6 +87,9 @@ function card({ status = 'open', title, desc, tag = '', time = '刚刚', archive
           ${fill ? `<button type="button" class="${cls('primaryBtn')}">${icon.send}<span>发送</span></button>` : ''}
           ${done ? '' : `<button type="button" class="${cls('ghostBtn', busy && 'ghostBtnBusy', pending && 'ghostBtnPending')}">${icon.summary}<span>总结</span></button>`}
           <span class="${cls('footSpacer')}"></span>
+          <button type="button" class="${cls(archived ? ['archiveBtn', 'archiveBtnOn'] : ['archiveBtn'])}">
+            ${icon.archive}<span>${archived ? '取消归档' : '归档'}</span>
+          </button>
           <span class="${cls('cardActions')}">
             <button type="button" class="${cls(open ? ['chevron', 'chevronOpen'] : ['chevron'])}">
               ${icon.chevron}<span>${open ? '收起详情' : '展开详情'}</span>
@@ -97,14 +101,13 @@ function card({ status = 'open', title, desc, tag = '', time = '刚刚', archive
     <div class="${cls(open ? ['detailWrap', 'detailOpen'] : ['detailWrap'])}">
       <div class="${cls('detail')}">
         <div class="${cls('completionDivider')}">待办总结</div>
-        ${open
-    ? `<p class="${cls('completionSummary')}">整理官网改版的需求边界，输出方案初稿：信息架构、页面清单与两周排期。</p>
+        ${empty
+    ? `<div class="${cls('detailEmpty')}">${icon.empty}</div>`
+    : `<p class="${cls('completionSummary')}">整理官网改版的需求边界，输出方案初稿：信息架构、页面清单与两周排期。</p>
         <div class="${cls('completionBlock')}">
           <p class="${cls('completionBlockTitle')}">实现路径</p>
           <ol class="${cls('completionSteps')}"><li>梳理现有导航与页面清单</li><li>产出方案初稿并评审</li></ol>
-        </div>
-        <div class="${cls('detailBar')}"><button type="button" class="${cls('detailDelete')}">${icon.trash}</button></div>`
-    : `<p class="${cls('detailEmpty')}">还没有待办总结</p>`}
+        </div>`}
       </div>
     </div>
   </li>`
@@ -161,6 +164,8 @@ const openCards = card({
   desc: '',
   tag: '',
   time: '3 小时前',
+  open: true,
+  empty: true,
 }) + card({
   status: 'in_progress',
   title: '把写回提示并入展开区',
@@ -182,6 +187,15 @@ const composer = `
       </div>
     </div>
   </li>`
+
+/** An archived item: the same card, filed away and offering the way back. */
+const archived = card({
+  title: '旧版导航的方案存档',
+  desc: '已被新版替代，留作记录。',
+  tag: '产品官网改版',
+  time: '上周',
+  archived: true,
+})
 
 const column = (body, theme, width = 380, height = 420) => `
   <section class="col" data-theme="${theme}" style="width:${width + 32}px">
@@ -212,7 +226,7 @@ const html = `<!doctype html>
 <body>
   <div class="cols">
     ${column(cards, 'light')}
-    ${column(composer + busy + openCards, 'light', 380, 620)}
+    ${column(composer + busy + openCards + archived, 'light', 380, 860)}
     ${column(composer + cards + busy, 'dark', 380, 620)}
   </div>
   <div class="cols" style="margin-top:24px">

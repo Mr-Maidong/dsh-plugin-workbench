@@ -31,6 +31,7 @@
 import { INVOCATIONS, PACKAGE_NAME } from './typert.contract.ts'
 import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
 import type {
+  WorkbenchArchiveRequest,
   WorkbenchCreateRequest,
   WorkbenchDeleteRequest,
   WorkbenchDeleteValue,
@@ -45,6 +46,7 @@ import type {
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$776f726b62656e63 {
+    archive: (request: WorkbenchArchiveRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
     create: (request: WorkbenchCreateRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
     delete: (request: WorkbenchDeleteRequest) => Promise<RemoteResult<WorkbenchDeleteValue>>
     probe: () => Promise<RemoteResult<WorkbenchProbeValue>>
@@ -54,6 +56,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     update: (request: WorkbenchUpdateRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
   }
   interface TypertRemoteMap {
+    'workbench/archive': (request: WorkbenchArchiveRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
     'workbench/create': (request: WorkbenchCreateRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
     'workbench/delete': (request: WorkbenchDeleteRequest) => Promise<RemoteResult<WorkbenchDeleteValue>>
     'workbench/probe': () => Promise<RemoteResult<WorkbenchProbeValue>>

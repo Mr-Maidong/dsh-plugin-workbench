@@ -284,19 +284,16 @@ export function WorkbenchTab(props) {
         setExpanded(current => current.includes(id) ? current.filter(entry => entry !== id) : [...current, id]);
     };
     /**
-     * Delete one item, after asking.
+     * File one item away, or bring it back (§9.31).
      *
-     * Deletion is the only irreversible thing this pane offers — everything else is
-     * an edit to a record that keeps its identity — so it is the one action that
-     * gets a confirmation. The text names the title, because a list of similar
-     * items is exactly where a misclick happens.
-     * @param item - the record to delete.
+     * No confirmation, and no `window.confirm`: archiving destroys nothing and the
+     * same control reverses it, which is precisely the property the delete button
+     * it replaced did not have.
+     * @param item - the record to archive or restore.
      */
-    const removeItem = async (item) => {
-        if (!window.confirm(t('action.deleteConfirm', { title: item.title })))
-            return;
+    const archiveItem = async (item) => {
         setNotice(undefined);
-        const result = await store.remove(item.id);
+        const result = await store.setArchived(item, !item.archived);
         if (result.code !== 'ok')
             report(result);
     };
@@ -319,10 +316,10 @@ export function WorkbenchTab(props) {
                                     store.setFilter(tier);
                                 }, children: [t(`filter.${tier}`), _jsx("span", { className: css.chipCount, children: snapshot.counts[tier] })] }, tier))), _jsx("span", { className: css.filterSpacer }), _jsx("button", { type: "button", className: css.iconBtn, title: t('action.create'), "aria-label": t('action.create'), onClick: () => { setEditing({ kind: 'create' }); }, children: _jsx(PlusGlyph, {}) })] })] }), _jsxs("div", { className: css.scroller, children: [notice !== undefined && _jsx("p", { className: css.notice, children: notice }), snapshot.phase === 'loading' && (_jsxs("div", { className: css.skeletonList, children: [_jsx("div", { className: css.skeleton }), _jsx("div", { className: css.skeleton })] })), snapshot.phase === 'error' && (_jsxs(_Fragment, { children: [_jsx("p", { className: `${css.status} ${css.statusError}`, children: t('state.error', { message: snapshot.error?.message ?? '' }) }), _jsx("button", { type: "button", className: css.retryBtn, onClick: () => { void store.refresh(); }, children: t('state.retry') })] })), snapshot.phase === 'ready' && (_jsxs(_Fragment, { children: [editing.kind === 'create' && (_jsx("ul", { className: css.list, children: _jsx("li", { className: `${css.card} ${css.cardComposing}`, children: _jsxs("div", { className: css.cardHead, children: [_jsx("span", { className: `${css.mark} ${css.markBusy}`, children: _jsx("span", { className: css.markDot }) }), _jsx("div", { className: css.cardBody, children: _jsx(Composer, { t: t, onCommit: title => { void createItem(title); }, onCancel: () => { setEditing({ kind: 'none' }); } }) })] }) }) })), snapshot.items.length === 0 && editing.kind !== 'create' && (_jsxs("div", { className: css.empty, children: [_jsx(EmptyGlyph, {}), snapshot.query !== '' || snapshot.filter !== 'all'
                                         ? (_jsxs(_Fragment, { children: [_jsx("p", { children: t('empty.filtered') }), _jsx("p", { className: css.emptyHint, children: t('empty.filteredHint') })] }))
-                                        : (_jsxs(_Fragment, { children: [_jsx("p", { children: t('empty.title') }), _jsx("p", { className: css.emptyHint, children: t('empty.hint') })] }))] })), snapshot.filter === 'all' && active.length > 0 && done.length > 0 && (_jsxs("p", { className: css.groupLabel, children: [t('group.active'), " \u00B7 ", active.length] })), _jsx("ul", { className: css.list, children: (snapshot.filter === 'all' ? active : snapshot.filter === 'done' ? done : snapshot.items).map(item => (_jsx(Card, { item: item, t: t, editing: editing, open: expanded.includes(item.id), pending: writeBack === item.id, onEdit: next => { setEditing(next); setNotice(undefined); }, onCommit: (field, draft) => { void commit(item, field, draft); }, onCancel: () => { setEditing({ kind: 'none' }); }, onToggle: () => { toggleExpanded(item.id); }, onDelete: () => { void removeItem(item); }, onRequestComplete: () => { void requestWriteBack(item); }, onFill: canFill ? () => { fillComposer(item); } : undefined }, item.id))) }), snapshot.filter === 'all' && done.length > 0 && (_jsxs(_Fragment, { children: [active.length > 0 && (_jsxs("p", { className: css.groupLabel, children: [t('group.done'), " \u00B7 ", done.length] })), _jsx("ul", { className: css.list, children: done.map(item => (_jsx(Card, { item: item, t: t, editing: editing, open: expanded.includes(item.id), pending: writeBack === item.id, onEdit: next => { setEditing(next); setNotice(undefined); }, onCommit: (field, draft) => { void commit(item, field, draft); }, onCancel: () => { setEditing({ kind: 'none' }); }, onToggle: () => { toggleExpanded(item.id); }, onDelete: () => { void removeItem(item); }, onRequestComplete: () => { void requestWriteBack(item); }, onFill: canFill ? () => { fillComposer(item); } : undefined }, item.id))) })] })), snapshot.total > snapshot.items.length && (_jsx("p", { className: css.status, children: t('list.more', { count: snapshot.total - snapshot.items.length }) }))] }))] })] }));
+                                        : (_jsxs(_Fragment, { children: [_jsx("p", { children: t('empty.title') }), _jsx("p", { className: css.emptyHint, children: t('empty.hint') })] }))] })), snapshot.filter === 'all' && active.length > 0 && done.length > 0 && (_jsxs("p", { className: css.groupLabel, children: [t('group.active'), " \u00B7 ", active.length] })), _jsx("ul", { className: css.list, children: (snapshot.filter === 'all' ? active : snapshot.filter === 'done' ? done : snapshot.items).map(item => (_jsx(Card, { item: item, t: t, editing: editing, open: expanded.includes(item.id), pending: writeBack === item.id, onEdit: next => { setEditing(next); setNotice(undefined); }, onCommit: (field, draft) => { void commit(item, field, draft); }, onCancel: () => { setEditing({ kind: 'none' }); }, onToggle: () => { toggleExpanded(item.id); }, onArchive: () => { void archiveItem(item); }, onRequestComplete: () => { void requestWriteBack(item); }, onFill: canFill ? () => { fillComposer(item); } : undefined }, item.id))) }), snapshot.filter === 'all' && done.length > 0 && (_jsxs(_Fragment, { children: [active.length > 0 && (_jsxs("p", { className: css.groupLabel, children: [t('group.done'), " \u00B7 ", done.length] })), _jsx("ul", { className: css.list, children: done.map(item => (_jsx(Card, { item: item, t: t, editing: editing, open: expanded.includes(item.id), pending: writeBack === item.id, onEdit: next => { setEditing(next); setNotice(undefined); }, onCommit: (field, draft) => { void commit(item, field, draft); }, onCancel: () => { setEditing({ kind: 'none' }); }, onToggle: () => { toggleExpanded(item.id); }, onArchive: () => { void archiveItem(item); }, onRequestComplete: () => { void requestWriteBack(item); }, onFill: canFill ? () => { fillComposer(item); } : undefined }, item.id))) })] })), snapshot.total > snapshot.items.length && (_jsx("p", { className: css.status, children: t('list.more', { count: snapshot.total - snapshot.items.length }) }))] }))] })] }));
 }
 /** One work item. */
-function Card({ item, t, editing, open, pending = false, onEdit, onCommit, onCancel, onToggle, onDelete, onRequestComplete, onFill, }) {
+function Card({ item, t, editing, open, pending = false, onEdit, onCommit, onCancel, onToggle, onArchive, onRequestComplete, onFill, }) {
     const isEditing = (field) => editing.kind === 'field' && editing.id === item.id && editing.field === field;
     const draftOf = (field) => editing.kind === 'field' && editing.id === item.id && editing.field === field ? editing.draft : '';
     const classes = [css.card];
@@ -346,11 +343,21 @@ function Card({ item, t, editing, open, pending = false, onEdit, onCommit, onCan
                                         ? (_jsx(InlineField, { className: `${css.field} ${css.fieldTag}`, value: draftOf('tag'), placeholder: t('card.noTag'), multiline: false, onChange: draft => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft }); }, onCommit: draft => { onCommit('tag', draft); }, onCancel: onCancel }))
                                         : (_jsx("button", { type: "button", className: item.tag === '' ? `${css.tag} ${css.tagEmpty}` : css.tag, onClick: () => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft: item.tag }); }, children: item.tag === '' ? t('card.noTag') : item.tag })), _jsx("span", { className: css.metaSpacer }), _jsx("span", { className: css.time, children: relative(item.updateAt, t('card.justNow')) })] }), _jsxs("div", { className: css.cardFoot, children: [onFill !== undefined && (_jsxs("button", { type: "button", className: css.primaryBtn, title: t('card.fillTitle'), "aria-label": t('card.fillTitle'), onClick: onFill, children: [_jsx(SendGlyph, {}), _jsx("span", { children: t('card.fill') })] })), item.status !== 'done' && (_jsxs("button", { type: "button", className: pending
                                             ? `${css.ghostBtn} ${css.ghostBtnPending}`
-                                            : item.status === 'in_progress' ? `${css.ghostBtn} ${css.ghostBtnBusy}` : css.ghostBtn, title: t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), "aria-label": t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), disabled: pending, onClick: onRequestComplete, children: [_jsx(SummaryGlyph, {}), _jsx("span", { children: t('card.summarize') })] })), _jsx("span", { className: css.footSpacer }), _jsx("span", { className: css.cardActions, children: _jsxs("button", { type: "button", className: open ? `${css.chevron} ${css.chevronOpen}` : css.chevron, title: open ? t('card.collapse') : t('card.expand'), "aria-label": open ? t('card.collapseDetails') : t('card.expandDetails'), "aria-expanded": open, onClick: onToggle, children: [_jsx(ChevronGlyph, {}), _jsx("span", { children: open ? t('card.collapseDetails') : t('card.expandDetails') })] }) })] })] })] }), _jsx("div", { className: open ? `${css.detailWrap} ${css.detailOpen}` : css.detailWrap, children: _jsxs("div", { className: css.detail, children: [_jsx("div", { className: css.completionDivider, children: t('completion.title') }), item.completion === undefined
-                            ? _jsx("p", { className: css.detailEmpty, children: t('detail.noCompletion') })
+                                            : item.status === 'in_progress' ? `${css.ghostBtn} ${css.ghostBtnBusy}` : css.ghostBtn, title: t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), "aria-label": t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), disabled: pending, onClick: onRequestComplete, children: [_jsx(SummaryGlyph, {}), _jsx("span", { children: t('card.summarize') })] })), _jsx("span", { className: css.footSpacer }), _jsxs("button", { type: "button", className: item.archived ? `${css.archiveBtn} ${css.archiveBtnOn}` : css.archiveBtn, title: t(item.archived ? 'card.unarchive' : 'card.archive'), "aria-label": t(item.archived ? 'card.unarchive' : 'card.archive'), onClick: onArchive, children: [_jsx(ArchiveGlyph, {}), _jsx("span", { children: t(item.archived ? 'card.unarchive' : 'card.archive') })] }), _jsx("span", { className: css.cardActions, children: _jsxs("button", { type: "button", className: open ? `${css.chevron} ${css.chevronOpen}` : css.chevron, title: open ? t('card.collapse') : t('card.expand'), "aria-label": open ? t('card.collapseDetails') : t('card.expandDetails'), "aria-expanded": open, onClick: onToggle, children: [_jsx(ChevronGlyph, {}), _jsx("span", { children: open ? t('card.collapseDetails') : t('card.expandDetails') })] }) })] })] })] }), _jsx("div", { className: open ? `${css.detailWrap} ${css.detailOpen}` : css.detailWrap, children: _jsxs("div", { className: css.detail, children: [_jsx("div", { className: css.completionDivider, children: t('completion.title') }), item.completion === undefined
+                            ? _jsx(CompletionEmpty, { t: t })
                             : _jsx(Completion, { item: item, t: t }), item.status !== 'done' && (_jsx("p", { className: css.detailHint, children: t(pending
                                 ? 'writeback.pending'
-                                : item.status === 'in_progress' ? 'writeback.hintRunning' : 'writeback.hintQueued') })), _jsx("div", { className: css.detailBar, children: _jsx("button", { type: "button", className: css.detailDelete, title: t('action.delete'), "aria-label": t('action.delete'), onClick: onDelete, children: _jsx(TrashGlyph, {}) }) })] }) })] }));
+                                : item.status === 'in_progress' ? 'writeback.hintRunning' : 'writeback.hintQueued') }))] }) })] }));
+}
+/**
+ * The expanded area with nothing written back yet (§9.31).
+ *
+ * One icon, no sentence: the divider above it already says 待办总结, so a line of
+ * copy underneath only restates the heading and the rule. The words survive as
+ * the icon's accessible name, which is where they still earn their keep.
+ */
+function CompletionEmpty({ t }) {
+    return (_jsx("div", { className: css.detailEmpty, role: "img", "aria-label": t('detail.noCompletion'), children: _jsxs("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "3", y: "4.5", width: "18", height: "15", rx: "4", stroke: "currentColor", strokeWidth: "1.3" }), _jsx("path", { d: "M3 9.5h18M7.5 14h7", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })] }) }));
 }
 /** The structured write-back summary, once one exists. */
 function Completion({ item, t }) {
@@ -474,7 +481,7 @@ function ChevronGlyph() {
  * an icon with a caption bolted on.
  */
 function CalendarGlyph() {
-    return (_jsxs("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "2.3", y: "3.6", width: "11.4", height: "10", rx: "2.6", stroke: "currentColor", strokeWidth: "1.4" }), _jsx("path", { d: "M2.3 6.9h11.4M5.8 2.4v2.3M10.2 2.4v2.3", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" })] }));
+    return (_jsxs("svg", { width: "15", height: "15", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "2.3", y: "3.6", width: "11.4", height: "10", rx: "2.6", stroke: "currentColor", strokeWidth: "1.4" }), _jsx("path", { d: "M2.3 6.9h11.4M5.8 2.4v2.3M10.2 2.4v2.3", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" })] }));
 }
 /**
  * The finished pill's badge: a filled disc with a knocked-out check.
@@ -518,11 +525,16 @@ function SendGlyph() {
 function SummaryGlyph() {
     return (_jsxs("svg", { width: "13", height: "13", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "3.1", y: "2.2", width: "9.8", height: "11.6", rx: "2.3", stroke: "currentColor", strokeWidth: "1.4" }), _jsx("path", { d: "M5.8 6.1h4.4M5.8 9.7h2.9", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" })] }));
 }
-/** Delete: a lidded bin, drawn at the fill glyph's weight so the pair matches. */
-function TrashGlyph() {
-    return (_jsxs("svg", { width: "13", height: "13", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("path", { d: "M2.8 4.4h10.4", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" }), _jsx("path", { d: "M6.4 4.4V3.1a.7.7 0 0 1 .7-.7h1.8a.7.7 0 0 1 .7.7v1.3", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round", strokeLinejoin: "round" }), _jsx("path", { d: "M4.3 4.4l.5 7.8a1.5 1.5 0 0 0 1.5 1.4h3.4a1.5 1.5 0 0 0 1.5-1.4l.5-7.8", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round", strokeLinejoin: "round" }), _jsx("path", { d: "M6.7 6.9v3.9M9.3 6.9v3.9", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })] }));
+/**
+ * Archive: a box with its lid laid flat and an arrow dropping into it (§9.31).
+ *
+ * Drawn at the same 13px/stroke-1.4 weight as the row's other glyphs, so the
+ * control that replaced delete does not read as a different kind of thing.
+ */
+function ArchiveGlyph() {
+    return (_jsxs("svg", { width: "13", height: "13", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "2.4", y: "3", width: "11.2", height: "3.1", rx: "1", stroke: "currentColor", strokeWidth: "1.3", strokeLinejoin: "round" }), _jsx("path", { d: "M3.5 6.1v5.4a1.4 1.4 0 0 0 1.4 1.4h6.2a1.4 1.4 0 0 0 1.4-1.4V6.1", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round", strokeLinejoin: "round" }), _jsx("path", { d: "M8 8.2v3.4M6.5 10.1L8 11.6l1.5-1.5", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round", strokeLinejoin: "round" })] }));
 }
-/** The empty state's mark: a sheet with a line of text, above the sentence. */
+/** The empty completion state: a sheet with nothing written on it (§9.31). */
 function EmptyGlyph() {
     return (_jsxs("svg", { className: css.emptyGlyph, width: "28", height: "28", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "3", y: "4.5", width: "18", height: "15", rx: "4", stroke: "currentColor", strokeWidth: "1.3" }), _jsx("path", { d: "M3 9.5h18M7.5 14h7", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })] }));
 }

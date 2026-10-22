@@ -38,7 +38,7 @@ import { TYPERT_REMOTE } from '../lib/typert.remote-client.js'
 const SERVICE_KEY = 'workbench'
 
 /** The methods P1 publishes. Kept explicit so a silently dropped endpoint fails here. */
-const EXPECTED_METHODS = ['probe', 'search', 'create', 'setDesc', 'update', 'requestComplete', 'delete']
+const EXPECTED_METHODS = ['probe', 'search', 'create', 'setDesc', 'update', 'archive', 'requestComplete', 'delete']
 
 /** Methods that take no argument beyond the caller's context. */
 const PARAMETERLESS = new Set(['probe'])

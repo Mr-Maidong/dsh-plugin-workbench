@@ -112,6 +112,7 @@ let WorkbenchService = (() => {
     let _setDesc_decorators;
     let _update_decorators;
     let _requestComplete_decorators;
+    let _archive_decorators;
     let _delete_decorators;
     return class WorkbenchService extends _classSuper {
         static {
@@ -122,6 +123,7 @@ let WorkbenchService = (() => {
             _setDesc_decorators = [Remote('setDesc')];
             _update_decorators = [Remote('update')];
             _requestComplete_decorators = [Remote('requestComplete')];
+            _archive_decorators = [Remote('archive')];
             _delete_decorators = [Remote('delete')];
             __esDecorate(this, null, _probe_decorators, { kind: "method", name: "probe", static: false, private: false, access: { has: obj => "probe" in obj, get: obj => obj.probe }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _search_decorators, { kind: "method", name: "search", static: false, private: false, access: { has: obj => "search" in obj, get: obj => obj.search }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -129,6 +131,7 @@ let WorkbenchService = (() => {
             __esDecorate(this, null, _setDesc_decorators, { kind: "method", name: "setDesc", static: false, private: false, access: { has: obj => "setDesc" in obj, get: obj => obj.setDesc }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _update_decorators, { kind: "method", name: "update", static: false, private: false, access: { has: obj => "update" in obj, get: obj => obj.update }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _requestComplete_decorators, { kind: "method", name: "requestComplete", static: false, private: false, access: { has: obj => "requestComplete" in obj, get: obj => obj.requestComplete }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _archive_decorators, { kind: "method", name: "archive", static: false, private: false, access: { has: obj => "archive" in obj, get: obj => obj.archive }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _delete_decorators, { kind: "method", name: "delete", static: false, private: false, access: { has: obj => "delete" in obj, get: obj => obj.delete }, metadata: _metadata }, null, _instanceExtraInitializers);
             if (_metadata) Object.defineProperty(this, Symbol.metadata, { enumerable: true, configurable: true, writable: true, value: _metadata });
         }
@@ -321,9 +324,9 @@ let WorkbenchService = (() => {
             const words = queryWords(request.query ?? '');
             const wanted = request.status === undefined ? undefined : new Set(request.status);
             const hits = [];
-            // Default `exclude`: archived items are the record of a deleted workspace
-            // (DESIGN.md §4.7), and leaving them out by default is what keeps them out
-            // of the daily view.
+            // Default `exclude`: archived items are out of the daily view by definition
+            // (DESIGN.md §4.7, §9.31) — whether the user filed them away or, one day, the
+            // owning workspace was deleted.
             const archived = request.archived ?? 'exclude';
             /*
              * Tier sizes are counted in the same pass but before any filter is applied,
@@ -516,6 +519,49 @@ let WorkbenchService = (() => {
             if (result.code === 'ok')
                 this.armWriteBack(request.id, result.item.updateAt);
             return result;
+        }
+        /**
+         * File one work item away, or bring it back (§4.7, §9.31).
+         *
+         * §4.7 gave `archived` one producer — a deleted workspace left its items behind
+         * as the record of what was asked for there — and this plugin had not
+         * implemented that yet, so nothing could reach the 已归档 tier. The user's own
+         * 归档 button is now the first producer, and it shares the field with that
+         * future one: an archived item is out of the three daily tiers and inside
+         * 已归档, whatever the reason it got there. Nothing is destroyed, which is
+         * exactly why the control needs no confirmation and why it can be undone from
+         * the same button.
+         *
+         * `archivedAt` is stamped on the way in and dropped on the way out, so the
+         * field never describes a moment that no longer applies. A no-op request (the
+         * item is already in the asked-for state) still returns the record, but writes
+         * nothing: pressing a toggle twice must not make the list look fresher than it
+         * is.
+         * @param request - target item, the state to move to, and the version last seen.
+         * @returns the record after the change, `conflict` on a stale version, or `invalid`.
+         * @throws when the domain could not be opened.
+         */
+        async archive(request) {
+            const invalid = this.rejectUnknownWorkspace(request.workspaceId);
+            if (invalid !== undefined)
+                return invalid;
+            const table = await this.table();
+            const observed = table.get(request.id);
+            if (observed === undefined || observed.workspaceId !== request.workspaceId) {
+                return { code: 'not_found', id: request.id };
+            }
+            if (observed.archived === request.archived)
+                return { code: 'ok', item: observed };
+            return this.mutate(request, (current) => {
+                if (request.archived)
+                    return { ...current, archived: true, archivedAt: nowInstant() };
+                // `archivedAt` is dropped rather than set to `undefined`: the record is
+                // serialised as-is, and an `undefined` would leave a key the storage
+                // schema's `exactOptionalPropertyTypes` shape does not have.
+                const { archivedAt, ...rest } = current;
+                void archivedAt;
+                return { ...rest, archived: false };
+            });
         }
         /**
          * Delete one work item.

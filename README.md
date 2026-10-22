@@ -15,8 +15,9 @@ them.
   subsequence, then falls back to recency.
 - **Four filters with counts.** 全部 / 未完成 / 已完成 / 已归档 (`all / active / done /
   archived`), plus a filter-aware empty state.
-- **In-place editing.** Create, rename, edit the description, set a tag, delete with
-  confirmation. An item's status is written by the write-back loop, not by hand.
+- **In-place editing.** Create, rename, edit the description, set a tag, and archive an item
+  (reversible: the same button restores it). An item's status is written by the write-back
+  loop, not by hand.
 - **Write-back.** Sending an item as 待办总结 (`write-back`) posts it into the conversation;
   the model's reply is written back onto the item, which completes itself. The request is
   idempotent, so a retry cannot duplicate a completion.

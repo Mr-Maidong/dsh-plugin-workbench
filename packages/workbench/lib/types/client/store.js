@@ -58,8 +58,26 @@ export function filterToRequest(filter) {
             return { archived: 'exclude' };
     }
 }
-/** Replace one record in a list, leaving the list untouched when it holds none. */
-function replace(items, next) {
+/**
+ * Whether a record belongs in a tier, by the same rule `filterToRequest` sends
+ * to the Host.
+ *
+ * Needed locally because an archive write can answer "does this still belong in
+ * the list I am looking at?" — and for the daily tiers the answer is no, which
+ * is a removal rather than a merge.
+ * @param item - the record as the Host returned it.
+ * @param filter - the tier on screen.
+ * @returns whether the record is still part of that tier.
+ */
+function matchesFilter(item, filter) {
+    switch (filter) {
+        case 'active': return !item.archived && item.status !== 'done';
+        case 'done': return !item.archived && item.status === 'done';
+        case 'archived': return item.archived;
+        case 'all': return !item.archived;
+    }
+}
+/** Replace one record in a list, leaving the list untouched when it holds none. */ function replace(items, next) {
     const at = items.findIndex(item => item.id === next.id);
     if (at < 0)
         return items;
@@ -233,6 +251,46 @@ export class WorkbenchStore {
             id: item.id, workspaceId: this.activeId, expectedUpdateAt: item.updateAt,
         });
         await this.settle(result);
+        return result;
+    }
+    /**
+     * File an item away, or bring it back (DESIGN.md §4.7, §9.31).
+     *
+     * The one write that can move a record between tiers, so it is not merged the
+     * way a field edit is: an archived item leaves 全部/未完成/已完成 and turns up
+     * under 已归档, and the totals have to move with it — or the filter row would go
+     * on advertising the sizes it had before the click. The item is dropped from
+     * the list outright when the active filter stops matching it.
+     * @param item - the item whose archived state changes.
+     * @param archived - `true` to file it away, `false` to bring it back.
+     * @returns the Host's result union.
+     */
+    async setArchived(item, archived) {
+        if (item.archived === archived)
+            return { code: 'ok', item };
+        const result = await this.gateway.archive({
+            id: item.id, workspaceId: this.activeId, archived, expectedUpdateAt: item.updateAt,
+        });
+        if (result.code !== 'ok')
+            return result;
+        if (this.getSnapshot().query !== '') {
+            await this.load();
+            return result;
+        }
+        const current = this.getSnapshot();
+        const visible = current.items.some(existing => existing.id === item.id);
+        // The counts describe the whole workspace, not the page on screen, so both
+        // halves of the move happen here: the tier the item leaves, and the one it
+        // joins. Only `total` follows the list.
+        const counts = tally(tally(current.counts, item, -1), result.item, 1);
+        const shown = matchesFilter(result.item, current.filter);
+        this.patch({
+            items: shown
+                ? [result.item, ...current.items.filter(existing => existing.id !== item.id)]
+                : current.items.filter(existing => existing.id !== item.id),
+            total: Math.max(0, current.total + (shown === visible ? 0 : shown ? 1 : -1)),
+            counts,
+        });
         return result;
     }
     /**

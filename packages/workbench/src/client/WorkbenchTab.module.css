@@ -328,11 +328,14 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
  *    finished card is the *most* legible one on screen, and the green pill says
  *    what it is without washing out the text. The hierarchy is now carried by the
  *    pill and by the title's own ink.
- * 2. The surface is tinted (4-8% of the accent over `bg-base`) instead of flat.
- *    It is what makes the card read as the reference's sage panel rather than as
- *    another grey rectangle. `bg-base` rather than `bg-layer-1` because the card
- *    sits *above* the sidebar's fill in the reference — lighter than its page in
- *    light mode, and a touch raised above it in dark mode too.
+ * 2. The surface is white on the leading edge with the accent arriving as a
+ *    stipple bloom on the trailing one (§9.31). It used to be a flat 4-8% tint
+ *    over the whole card, which made every card the same sage rectangle; the
+ *    reference's card is mostly the page's own surface, with the colour built up
+ *    out of dots toward the corner the eye leaves by. `bg-base` rather than
+ *    `bg-layer-1` because the card sits *above* the sidebar's fill in the
+ *    reference — lighter than its page in light mode, and a touch raised above
+ *    it in dark mode too.
  * 3. The actions are labelled buttons, not 24px icon squares: that is the whole
  *    point of the reference's footer, and it is why the card grew a row.
  * 4. Every glyph in the card is one weight, 500. Emphasis is carried by ink and
@@ -342,18 +345,61 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
  *    the rules below may only restate it, never step away from it.
  */
 .card {
+  position: relative;
+  /* The stipple below is a negative-z pseudo-element, which must sit above this
+     card's own background but under its text. `isolation` is what scopes that
+     negative index to the card instead of to the list behind it. */
+  isolation: isolate;
   padding: 12px 13px 13px;
   font-weight: 500;
   border: 0.5px solid var(--dsw-alias-border-l1);
   border-radius: 14px;
-  background:
-    linear-gradient(
-      158deg,
-      color-mix(in srgb, var(--wb-accent) 4%, var(--dsw-alias-bg-base)),
-      color-mix(in srgb, var(--wb-accent) 8%, var(--dsw-alias-bg-base))
-    );
+  background: var(--dsw-alias-bg-base);
   box-shadow: var(--wb-card-shadow);
   transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+/*
+ * The bloom: ONE layer of small squares, faded by a mask anchored just past the
+ * trailing corner.
+ *
+ * It used to be three layers — a soft wash plus two dot grids at different
+ * pitches — and the pitches beat against each other: the field read as two
+ * matrices stacked, which is the one thing it must not do. Now it is one
+ * `repeating-conic-gradient` and nothing else: a quarter-tile wedge at exactly
+ * 90° is a square (a quadrant of a square tile), so each 6px cell holds one 3px
+ * semi-transparent square, and the tile only ever repeats.
+ *
+ * The colour still comes from the accent token, so the squares follow the theme;
+ * the mask is what keeps the leading half white. `border-radius: inherit` clips
+ * the pattern to the card's rounding, so it can never poke out of the corner —
+ * no `overflow: hidden`, which would also clip the focus rings in the footer.
+ */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    color-mix(in srgb, var(--wb-accent) 60%, transparent) 0deg 90deg,
+    transparent 90deg 360deg
+  );
+  background-size: 6px 6px;
+  /* A half-tile square is a lot more ink than the 1px dots it replaced, so each
+     one has to stay barely there: at this strength the field averages out to
+     roughly the wash it replaced, and only shows as squares up close. */
+  opacity: 0.22;
+  -webkit-mask-image: radial-gradient(
+    76% 120% at 102% 2%,
+    #000 0%, rgb(0 0 0 / 64%) 30%, rgb(0 0 0 / 26%) 54%, transparent 78%
+  );
+  mask-image: radial-gradient(
+    76% 120% at 102% 2%,
+    #000 0%, rgb(0 0 0 / 64%) 30%, rgb(0 0 0 / 26%) 54%, transparent 78%
+  );
 }
 
 .card:hover {
@@ -406,7 +452,7 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   align-items: flex-start;
   /* The mark's 20px plus this 9px gap is the body column's indent, which is what
      `.detail` pads to. */
-  gap: 9px;
+  gap: 6px;
 }
 
 /*
@@ -561,12 +607,19 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
  * user is filtering by (the filter chips above the list are where categories
  * live). The tag keeps its edit affordance: it is still a button, and it still
  * hovers to a wash.
+ *
+ * §9.31: this row and the action row below it hang on the card's own content
+ * edge, not on the body column — the mark's 20px slot and the head's 6px gap are
+ * given back as a negative margin. Only the title and the description are set in
+ * from the status rail; the two rows that are about the whole item use the width
+ * the rail would otherwise cost them.
  */
 .metaRow {
   display: flex;
   align-items: center;
   gap: 5px;
   margin-top: 12px;
+  margin-left: -26px;
   min-width: 0;
   /* The same ink as the description: the reference sets the project line at body
      weight, not at caption weight — it is a fact to read, not a footnote. */
@@ -711,20 +764,24 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 /* ------------------------------------------------------------- action row */
 
 /*
- * The action row (§9.30).
+ * The action row (§9.30, §9.31).
  *
- * Two verbs fill the leading edge — into the composer, and back through the
- * model — and the disclosure closes the trailing one. The reference design's own
- * footer has four; archive is not one of ours, because archiving is not a user
- * action in this plugin (an item is archived when its workspace is deleted,
- * §4.7), and inventing a control for it would offer something the Host cannot
- * do.
+ * Three verbs fill the leading edge — into the composer, back through the model,
+ * and away to the archive — and the disclosure closes the trailing one. The
+ * reference design's own footer has four; archive joined it when delete left
+ * (§9.31): filing an item away is reversible and needs no confirmation, which is
+ * what makes it a footer control rather than something hidden behind the fold.
+ *
+ * The row hangs on the card's content edge like the meta line above it, so the
+ * full width of the card is available to three buttons, a spacer and the
+ * disclosure.
  */
 .cardFoot {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-top: 14px;
+  margin-left: -26px;
 }
 
 .footSpacer {
@@ -845,6 +902,57 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 }
 
 /*
+ * The archive control, closing the leading cluster (§9.31).
+ *
+ * It is the quietest thing in the row on purpose: filing an item away is a
+ * housekeeping verb, not work on the item, and the reference's footer gives it
+ * the weight of a footnote. That is why it has no outline until hovered, unlike
+ * the two action buttons beside it — and why its words, not its box, are what
+ * the narrow-width rule gives up first.
+ *
+ * `aria-label` and `title` carry the words when they are gone, so the control is
+ * never nameless at a narrow pane.
+ */
+.archiveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: none;
+  height: 26px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--wb-tertiary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.archiveBtn:hover {
+  background: var(--wb-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.archiveBtn:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+/* An archived card's button is the way back, so it wears the accent: the same
+   tint the write-back uses for "this one is still live". */
+.archiveBtnOn {
+  color: var(--wb-business);
+}
+
+.archiveBtnOn:hover {
+  color: var(--wb-business);
+}
+
+/*
  * The disclosure: a labelled ghost button, holding the card's trailing edge.
  *
  * It used to be a 24px chevron square (§9.11 第 7 条). The reference design labels
@@ -891,25 +999,39 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 }
 
 /*
- * Narrow panes drop the disclosure's words.
+ * Narrow panes drop the words on the two controls at the outer ends.
  *
  * The query is named, and `.pane` carries that name — `.scroller` below is an
  * unnamed size container, and an anonymous query would resolve against *it*,
  * where a scroll container is not a usable query container in every engine.
- * Naming the pane skips it and asks the column the user drags. The footer has
- * pane - 92 to work with (28 scroller padding, 15 scrollbar gutter, 26 card
- * padding, 31 for the dot column, less the 3px the last button overhangs), and
- * the three labelled controls want 207 of it; below 306 the words go and the
- * chevron stays, with the full label still in `aria-label` and `title`. Wrapping
- * the disclosure onto its own row instead reads as a stray line.
+ * Naming the pane skips it and asks the column the user drags.
+ *
+ * The row now has three buttons, a spacer and the disclosure, so the width it
+ * needs is no longer a rounding error: at the row's own metrics — 59 for 发送, 60
+ * for 总结, 56 for 归档, 75 for 展开详情, 18 of gaps, less the 3px the last button
+ * overhangs — it wants 265 of a box that is `pane - 70` (43 of scroller padding,
+ * gutter and card chrome, plus 27 of card padding). Below 340 that stops adding
+ * up, and the two controls that are read rather than used first — the archive
+ * verb and the disclosure — fold to their glyphs, taking the requirement down to
+ * 182, which every pane this sidebar can be dragged to still satisfies. Both keep
+ * their words in `aria-label` and `title`, so neither is ever nameless.
+ *
+ * Folding only the disclosure's label is not enough at this width: measured at
+ * pane 320 (before §9.31 added a third control) the row already overflowed by
+ * 25px, and the spacer is what silently ate it.
  */
-@container wb-pane (max-width: 306px) {
-  .chevron > span {
+@container wb-pane (max-width: 340px) {
+  .chevron > span,
+  .archiveBtn > span {
     display: none;
   }
 
   .chevron {
     padding: 0 4px;
+  }
+
+  .archiveBtn {
+    padding: 0 6px;
   }
 }
 
@@ -1105,75 +1227,21 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   overflow-x: clip;
 }
 
-/* Indented to the body column: 13px of card padding + the 20px mark + the 9px
-   gap = 42px from the card's edge, i.e. 29px here (§9.30). */
+/* The expanded area spans the card now that its delete row is gone (§9.31): it
+   used to be indented to the body column at 29px, which put a summary in a
+   narrower column than the meta line above it and left the empty state's icon
+   floating. `6px 0 2px` is the reference's own spacing for the block — air above
+   the divider, the card's padding below. */
 .detail {
-  padding: 2px 0 2px 29px;
-}
-
-/*
- * The expanded area's footer row — the prototype's `.detailBar`. Only its trailing
- * control is left: delete sits in the open card's bottom-right corner, where the
- * prototype puts it. The write-back request used to lead this row and moved up to
- * the heading line (§9.13), which is why the row needs nothing but `flex-end` now:
- * a destructive control belongs where reaching it costs a gesture, and a request
- * the user may want without opening anything does not.
- */
-.detailBar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-/*
- * The same 24px icon button as the pane's other icon controls — 8px radius,
- * caption ink, 13px glyph — with the label dropped, so the pane's destructive
- * control is not the one shape that stands out. It is always visible here:
- * opening the card is already what holds it back, and the click is confirmed on
- * top. The -4px pulls it into the column the disclosure's own right edge
- * occupies, which carries the same overhang.
- */
-.detailDelete {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  margin-right: -4px;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--wb-caption);
-  cursor: pointer;
-  transition: background 130ms ease, color 130ms ease;
-}
-
-.detailDelete:hover {
-  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent);
-  color: var(--dsw-alias-state-error-primary);
-}
-
-.detailDelete:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
-  outline-offset: 1px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .detailDelete {
-    transition: none;
-  }
+  padding: 6px 0 2px;
 }
 
 /*
  * The write-back's next step, said in words (§9.19). Same size and ink as the
- * empty-completion line it sits beside, because it is the same kind of text — a
- * note about the section, not content in it — and it is separated from the
- * section by the space above the bar rather than by another rule (at most one
- * rule in the expanded area, §5.4).
+ * section's other labels, because it is the same kind of text — a note about the
+ * section, not content in it — and it is separated from the section by the space
+ * above it rather than by another rule (at most one rule in the expanded area,
+ * §5.4).
  */
 .detailHint {
   margin: 12px 0 0;
@@ -1181,10 +1249,27 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   font-size: 10.5px;
 }
 
+/*
+ * Nothing written back yet (§9.31): one glyph, no sentence.
+ *
+ * The divider above already reads 待办总结, so the sentence that used to sit here
+ * ("还没有待办总结，写回后本条自动完结") only said the heading again and then
+ * explained a rule nobody asked about at that moment. The words survive as the
+ * icon's accessible name. The mark is the list empty state's own sheet, at
+ * caption strength, because the two mean the same thing — nothing here yet.
+ */
 .detailEmpty {
-  margin: 0;
-  color: var(--wb-caption);
-  font-size: 10.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0 6px;
+  color: var(--wb-tertiary);
+  opacity: 0.7;
+}
+
+.detailEmpty > svg {
+  width: 26px;
+  height: 26px;
 }
 
 .completionDivider {
@@ -1390,6 +1475,7 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   }
 
   .card,
+  .archiveBtn,
   .chevron,
   .chevron svg,
   .chip,

@@ -200,6 +200,13 @@ const deleteRequestSchema = lazy(() => z.object({
   id: z.string(),
 }).readonly())
 
+const archiveRequestSchema = lazy(() => z.object({
+  workspaceId: z.string(),
+  id: z.string(),
+  archived: z.boolean(),
+  expectedUpdateAt: z.string().optional(),
+}).readonly())
+
 /**
  * The three ways a write and a delete differ, and the one way they do not.
  *
@@ -282,6 +289,15 @@ export const INVOCATIONS: readonly InvocationDescriptor[] = [
     method: 'requestComplete',
     invocation: { kind: 'direct' },
     parameters: [param('request', 'WorkbenchRequestCompleteRequest', requestCompleteRequestSchema)],
+    result: codec('WorkbenchWriteValue', writeValueSchema),
+  },
+  {
+    id: `${PACKAGE_NAME}#${SERVICE_KEY}/archive`,
+    service: SERVICE_KEY,
+    namespace: SERVICE_KEY,
+    method: 'archive',
+    invocation: { kind: 'direct' },
+    parameters: [param('request', 'WorkbenchArchiveRequest', archiveRequestSchema)],
     result: codec('WorkbenchWriteValue', writeValueSchema),
   },
   {

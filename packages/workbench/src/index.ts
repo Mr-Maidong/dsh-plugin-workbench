@@ -28,8 +28,8 @@ import { planRequestComplete } from './state.ts'
 import type { RequestCompletePlan } from './state.ts'
 import { workbenchDomain } from './storage.ts'
 import type {
-  WorkItemId, WorkItemRecord, WorkbenchCompletionInput, WorkbenchCreateRequest,
-  WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchProbeValue,
+  WorkItemId, WorkItemRecord, WorkbenchArchiveRequest, WorkbenchCompletionInput,
+  WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchProbeValue,
   WorkbenchRequestCompleteRequest, WorkbenchSearchRequest, WorkbenchSearchValue,
   WorkbenchSetDescRequest, WorkbenchUpdateRequest, WorkbenchWriteValue,
 } from './types.ts'
@@ -315,9 +315,9 @@ export class WorkbenchService extends TypertRemoteService {
     const wanted = request.status === undefined ? undefined : new Set<string>(request.status)
 
     const hits: { readonly item: WorkItemRecord; readonly score: number }[] = []
-    // Default `exclude`: archived items are the record of a deleted workspace
-    // (DESIGN.md §4.7), and leaving them out by default is what keeps them out
-    // of the daily view.
+    // Default `exclude`: archived items are out of the daily view by definition
+    // (DESIGN.md §4.7, §9.31) — whether the user filed them away or, one day, the
+    // owning workspace was deleted.
     const archived = request.archived ?? 'exclude'
     /*
      * Tier sizes are counted in the same pass but before any filter is applied,
@@ -504,6 +504,48 @@ export class WorkbenchService extends TypertRemoteService {
     // stale, so there is no version a later completion could honestly match.
     if (result.code === 'ok') this.armWriteBack(request.id, result.item.updateAt)
     return result
+  }
+
+  /**
+   * File one work item away, or bring it back (§4.7, §9.31).
+   *
+   * §4.7 gave `archived` one producer — a deleted workspace left its items behind
+   * as the record of what was asked for there — and this plugin had not
+   * implemented that yet, so nothing could reach the 已归档 tier. The user's own
+   * 归档 button is now the first producer, and it shares the field with that
+   * future one: an archived item is out of the three daily tiers and inside
+   * 已归档, whatever the reason it got there. Nothing is destroyed, which is
+   * exactly why the control needs no confirmation and why it can be undone from
+   * the same button.
+   *
+   * `archivedAt` is stamped on the way in and dropped on the way out, so the
+   * field never describes a moment that no longer applies. A no-op request (the
+   * item is already in the asked-for state) still returns the record, but writes
+   * nothing: pressing a toggle twice must not make the list look fresher than it
+   * is.
+   * @param request - target item, the state to move to, and the version last seen.
+   * @returns the record after the change, `conflict` on a stale version, or `invalid`.
+   * @throws when the domain could not be opened.
+   */
+  @Remote('archive')
+  async archive(request: WorkbenchArchiveRequest): Promise<WorkbenchWriteValue> {
+    const invalid = this.rejectUnknownWorkspace(request.workspaceId)
+    if (invalid !== undefined) return invalid
+    const table = await this.table()
+    const observed = table.get(request.id as WorkItemId)
+    if (observed === undefined || observed.workspaceId !== request.workspaceId) {
+      return { code: 'not_found', id: request.id }
+    }
+    if (observed.archived === request.archived) return { code: 'ok', item: observed }
+    return this.mutate(request, (current) => {
+      if (request.archived) return { ...current, archived: true, archivedAt: nowInstant() }
+      // `archivedAt` is dropped rather than set to `undefined`: the record is
+      // serialised as-is, and an `undefined` would leave a key the storage
+      // schema's `exactOptionalPropertyTypes` shape does not have.
+      const { archivedAt, ...rest } = current
+      void archivedAt
+      return { ...rest, archived: false }
+    })
   }
 
   /**

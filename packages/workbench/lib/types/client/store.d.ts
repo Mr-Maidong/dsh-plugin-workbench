@@ -24,7 +24,7 @@
  * push an item out of the query's match set, or pull it in. Those writes take the
  * extra refresh instead of merging, which is cheap because a query is rare.
  */
-import type { WorkItemId, WorkItemRecord, WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchRequestCompleteRequest, WorkbenchSearchCounts, WorkbenchSearchRequest, WorkbenchSearchValue, WorkbenchSetDescRequest, WorkbenchUpdateRequest, WorkbenchWriteValue } from 'dsh-plugin-workbench/types';
+import type { WorkItemId, WorkItemRecord, WorkbenchArchiveRequest, WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchRequestCompleteRequest, WorkbenchSearchCounts, WorkbenchSearchRequest, WorkbenchSearchValue, WorkbenchSetDescRequest, WorkbenchUpdateRequest, WorkbenchWriteValue } from 'dsh-plugin-workbench/types';
 /** The four filter tiers of DESIGN.md §5.4. Orthogonal to `status`, not a status. */
 export type WorkbenchFilterTier = 'all' | 'active' | 'done' | 'archived';
 /** Immutable view of one workspace's work items. */
@@ -71,6 +71,7 @@ export interface WorkbenchGateway {
     create(request: WorkbenchCreateRequest): Promise<WorkbenchWriteValue>;
     setDesc(request: WorkbenchSetDescRequest): Promise<WorkbenchWriteValue>;
     update(request: WorkbenchUpdateRequest): Promise<WorkbenchWriteValue>;
+    archive(request: WorkbenchArchiveRequest): Promise<WorkbenchWriteValue>;
     requestComplete(request: WorkbenchRequestCompleteRequest): Promise<WorkbenchWriteValue>;
     delete(request: WorkbenchDeleteRequest): Promise<WorkbenchDeleteValue>;
 }
@@ -171,6 +172,19 @@ export declare class WorkbenchStore {
      * @returns the Host's result union.
      */
     requestComplete(item: WorkItemRecord): Promise<WorkbenchWriteValue>;
+    /**
+     * File an item away, or bring it back (DESIGN.md §4.7, §9.31).
+     *
+     * The one write that can move a record between tiers, so it is not merged the
+     * way a field edit is: an archived item leaves 全部/未完成/已完成 and turns up
+     * under 已归档, and the totals have to move with it — or the filter row would go
+     * on advertising the sizes it had before the click. The item is dropped from
+     * the list outright when the active filter stops matching it.
+     * @param item - the item whose archived state changes.
+     * @param archived - `true` to file it away, `false` to bring it back.
+     * @returns the Host's result union.
+     */
+    setArchived(item: WorkItemRecord, archived: boolean): Promise<WorkbenchWriteValue>;
     /**
      * Delete an item for good. Archiving is a different thing (DESIGN.md §4.7).
      * @param id - item to remove.

@@ -4057,7 +4057,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return /* @__PURE__ */ _superRefine(fn, params);
 		}
 		//#endregion
-		//#region packages/workbench/lib/typert.contract-BCazqAqp.js
+		//#region packages/workbench/lib/typert.contract-BCQpTL2y.js
 		/**
 		* The wire contract between the Host service and the browser half.
 		*
@@ -4247,6 +4247,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			workspaceId: string(),
 			id: string()
 		}).readonly());
+		const archiveRequestSchema = lazy(() => object({
+			workspaceId: string(),
+			id: string(),
+			archived: boolean(),
+			expectedUpdateAt: string().optional()
+		}).readonly());
 		/**
 		* The three ways a write and a delete differ, and the one way they do not.
 		*
@@ -4378,6 +4384,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					result: codec("WorkbenchWriteValue", writeValueSchema)
 				},
 				{
+					id: `${PACKAGE_NAME}#${SERVICE_KEY}/archive`,
+					service: SERVICE_KEY,
+					namespace: SERVICE_KEY,
+					method: "archive",
+					invocation: { kind: "direct" },
+					parameters: [param("request", "WorkbenchArchiveRequest", archiveRequestSchema)],
+					result: codec("WorkbenchWriteValue", writeValueSchema)
+				},
+				{
 					id: `${PACKAGE_NAME}#${SERVICE_KEY}/delete`,
 					service: SERVICE_KEY,
 					namespace: SERVICE_KEY,
@@ -4487,7 +4502,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		//#endregion
 		//#region \0dsh-css:D:\Workbase\dsh-plugins\dsh-plugin-workbench\packages\workbench\src\client\WorkbenchTab.module.css.mjs
-		const css$1 = ".SWF62W_pane{--wb-tertiary:color-mix(in srgb, var(--dsw-alias-label-secondary) 72%, var(--dsw-alias-bg-base));--wb-caption:color-mix(in srgb, var(--dsw-alias-label-secondary) 51%, var(--dsw-alias-bg-base));--wb-business:var(--dsw-alias-brand-primary);--wb-hover:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);--wb-border-strong:color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);--wb-accent-wash:color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);--wb-accent:var(--dsw-alias-state-success-primary);--wb-accent-soft:color-mix(in srgb, var(--wb-accent) 15%, transparent);--wb-accent-fill:color-mix(in srgb, var(--wb-accent) 92%, var(--dsw-alias-bg-base));--wb-on-accent:var(--dsw-alias-bg-base);--wb-body:color-mix(in srgb, var(--dsw-alias-label-secondary) 92%, var(--dsw-alias-bg-base));--wb-card-shadow:0 1px 2px #0000000a, 0 8px 20px -14px #00000038;--wb-card-shadow-hover:0 2px 4px #0000000d, 0 12px 26px -14px #00000042;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);--wb-jelly:cubic-bezier(.34, 1.56, .64, 1);flex-direction:column;display:flex;container:SWF62W_wb-pane/inline-size}.SWF62W_toolbar{flex-direction:column;flex:none;padding:14px 16px 0;display:flex}.SWF62W_searchRow{align-items:center;gap:8px;display:flex}.SWF62W_searchField{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);min-width:0;height:36px;color:var(--wb-tertiary);border-radius:13px;flex:1;align-items:center;gap:8px;padding:0 11px;transition:border-color .15s,background .15s;display:flex}.SWF62W_searchField:focus-within{border-color:var(--wb-business);background:var(--dsw-alias-bg-base)}.SWF62W_searchInput{min-width:0;height:100%;color:var(--dsw-alias-label-primary);font:inherit;background:0 0;border:0;outline:none;flex:1;padding:0;font-size:13px}.SWF62W_searchInput::placeholder{color:var(--wb-caption)}.SWF62W_filterRow{align-items:center;gap:8px;margin-top:12px;display:flex}.SWF62W_chip{background:var(--dsw-alias-bg-layer-1);height:28px;color:var(--dsw-alias-label-secondary);font:inherit;cursor:pointer;white-space:nowrap;border:.5px solid #0000;border-radius:999px;flex:none;align-items:center;gap:5px;padding:0 11px;font-size:12.5px;transition:background .13s,color .13s;display:inline-flex}.SWF62W_chip:hover{background:var(--dsw-alias-bg-layer-2)}.SWF62W_chip:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_chipFlat{background:0 0;height:26px}.SWF62W_chipFlat:hover{background:var(--dsw-alias-interactive-bg-hover)}.SWF62W_chipActive{background:var(--wb-accent-wash);color:var(--wb-business)}.SWF62W_chipActive:hover{background:color-mix(in srgb, var(--dsw-alias-brand-primary) 20%, transparent)}.SWF62W_chipCount{color:inherit;opacity:.62;font-variant-numeric:tabular-nums}.SWF62W_titleIcon{vertical-align:-2px;flex:none;margin-right:6px}.SWF62W_filterSpacer{flex:1;min-width:0}.SWF62W_iconBtn{width:28px;height:28px;color:var(--wb-tertiary);cursor:pointer;background:0 0;border:0;border-radius:9px;flex:none;justify-content:center;align-items:center;transition:background .13s,color .13s;display:inline-flex}.SWF62W_iconBtn:hover{background:var(--wb-hover);color:var(--dsw-alias-label-primary)}.SWF62W_iconBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}button[data-dockkit-tab-close=dsh-plugin-workbench\\/workbench]{display:none}.SWF62W_scroller{scrollbar-gutter:stable;flex:1;min-height:0;padding:14px 14px 24px;overflow:auto;container-type:size}.SWF62W_groupLabel{color:var(--wb-caption);letter-spacing:.02em;align-items:center;gap:8px;margin:4px 4px 9px;font-size:11.5px;font-weight:500;display:flex}.SWF62W_groupLabel:after{content:\"\";background:var(--dsw-alias-border-l1);flex:1;height:.5px}.SWF62W_list+.SWF62W_groupLabel{margin-top:20px}.SWF62W_list{flex-direction:column;gap:9px;margin:0;padding:0;list-style:none;display:flex}.SWF62W_card{border:.5px solid var(--dsw-alias-border-l1);background:linear-gradient(158deg, color-mix(in srgb, var(--wb-accent) 4%, var(--dsw-alias-bg-base)), color-mix(in srgb, var(--wb-accent) 8%, var(--dsw-alias-bg-base)));box-shadow:var(--wb-card-shadow);border-radius:14px;padding:12px 13px 13px;font-weight:500;transition:box-shadow .16s,border-color .16s}.SWF62W_card:hover{box-shadow:var(--wb-card-shadow-hover)}.SWF62W_cardComposing{border-color:color-mix(in srgb, var(--wb-accent) 46%, transparent)}.SWF62W_cardDone{box-shadow:0 1px 2px #00000008}.SWF62W_cardDone:hover{box-shadow:var(--wb-card-shadow-hover)}.SWF62W_cardArchived{background:color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent);border-style:dashed}.SWF62W_cardArchived .SWF62W_mark{opacity:.55}.SWF62W_cardArchived .SWF62W_titleText{color:var(--wb-tertiary)}.SWF62W_cardHead{align-items:flex-start;gap:9px;display:flex}.SWF62W_mark{width:20px;height:20px;color:var(--dsw-alias-state-idle-primary);background:0 0;border-radius:999px;flex:none;place-items:center;margin-top:1px;transition:background .16s,color .16s;display:grid}.SWF62W_markDot{background:currentColor;border-radius:50%;width:9px;height:9px}.SWF62W_markDone,.SWF62W_markBusy{background:var(--wb-accent-soft);color:var(--wb-accent)}.SWF62W_cardBody{flex-direction:column;flex:1;min-width:0;display:flex}.SWF62W_titleRow{align-items:center;gap:6px;min-width:0;display:flex}.SWF62W_titleText{min-width:0;color:var(--dsw-alias-label-primary);font:inherit;letter-spacing:-.01em;text-align:left;cursor:text;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;border-radius:6px;flex:1;margin:0;padding:0 4px;font-size:14px;font-weight:500;line-height:20px;overflow:hidden}.SWF62W_titleText:hover{background:var(--wb-hover)}.SWF62W_descText{-webkit-line-clamp:2;line-clamp:2;color:var(--wb-body);font:inherit;text-align:left;white-space:pre-wrap;cursor:text;overflow-wrap:anywhere;background:0 0;border:0;border-radius:6px;-webkit-box-orient:vertical;margin:5px 0 0;padding:0 4px;font-size:12px;line-height:19px;display:-webkit-box;overflow:hidden}.SWF62W_descText:hover{background:var(--wb-hover)}.SWF62W_descEmpty{color:var(--wb-caption);font-style:italic}.SWF62W_metaRow{min-width:0;color:var(--wb-body);align-items:center;gap:5px;margin-top:12px;font-size:11.5px;line-height:17px;display:flex}.SWF62W_metaRow>svg{color:var(--wb-caption);flex:none}.SWF62W_metaLabel{color:inherit;flex:none}.SWF62W_metaSpacer{flex:1;min-width:0}.SWF62W_tag{max-width:150px;color:var(--wb-body);font:inherit;cursor:text;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:.5px solid #0000;border-radius:6px;flex:none;align-items:center;padding:2px 4px;font-size:11.5px;line-height:17px;transition:background .13s,color .13s;display:inline-flex;overflow:hidden}.SWF62W_tag:hover{background:var(--wb-hover);color:var(--dsw-alias-label-secondary)}.SWF62W_tagEmpty{color:var(--wb-caption)}.SWF62W_statusPill{white-space:nowrap;border:.5px solid #0000;border-radius:999px;flex:none;align-items:center;gap:4px;height:21px;padding:0 8px 0 6px;font-size:10.5px;font-weight:500;line-height:1;display:inline-flex}.SWF62W_statusPillDone{border-color:color-mix(in srgb, var(--wb-accent) 46%, transparent);background:var(--wb-accent-soft);color:color-mix(in srgb, var(--wb-accent) 86%, var(--dsw-alias-label-primary))}.SWF62W_statusPillBusy{border-color:color-mix(in srgb, var(--wb-business) 30%, transparent);background:color-mix(in srgb, var(--wb-business) 10%, transparent);color:var(--wb-business)}.SWF62W_statusPip{background:currentColor;border-radius:50%;width:5px;height:5px;animation:1.8s ease-in-out infinite SWF62W_wb-status-breathe}@keyframes SWF62W_wb-status-breathe{0%,to{opacity:1}50%{opacity:.35}}.SWF62W_archivedBadge{background:color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);height:19px;color:var(--wb-caption);white-space:nowrap;border-radius:999px;flex:none;align-items:center;padding:0 7px;font-size:10px;line-height:1;display:inline-flex}.SWF62W_time{color:var(--wb-caption);font-variant-numeric:tabular-nums;flex:none;font-size:10.5px}.SWF62W_cardFoot{align-items:center;gap:6px;margin-top:14px;display:flex}.SWF62W_footSpacer{flex:1;min-width:0}.SWF62W_primaryBtn{background:var(--wb-accent-fill);height:26px;color:var(--wb-on-accent);font:inherit;cursor:pointer;box-shadow:0 1px 2px color-mix(in srgb, var(--wb-accent) 28%, transparent);border:0;border-radius:10px;flex:none;justify-content:center;align-items:center;gap:5px;padding:0 8px;font-size:12px;font-weight:500;transition:filter .13s,box-shadow .16s;display:inline-flex}.SWF62W_primaryBtn:hover{filter:brightness(1.06);box-shadow:0 2px 6px color-mix(in srgb, var(--wb-accent) 34%, transparent)}.SWF62W_primaryBtn:active{filter:brightness(.95)}.SWF62W_primaryBtn:focus-visible{outline:2px solid var(--wb-accent);outline-offset:1px}.SWF62W_ghostBtn{border:.5px solid var(--dsw-alias-border-l2);background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);height:26px;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:10px;flex:none;justify-content:center;align-items:center;gap:5px;padding:0 8px;font-size:12px;font-weight:500;transition:background .13s,border-color .13s,color .13s;display:inline-flex}.SWF62W_ghostBtn:hover{background:var(--dsw-alias-bg-base);border-color:var(--wb-border-strong)}.SWF62W_ghostBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_ghostBtnBusy{border-color:color-mix(in srgb, var(--wb-business) 38%, transparent);color:var(--wb-business)}.SWF62W_ghostBtnBusy:hover{color:var(--wb-business)}.SWF62W_ghostBtnPending{color:var(--wb-business);cursor:default;animation:1.6s ease-in-out infinite SWF62W_wb-writeback-wait}.SWF62W_ghostBtnPending:hover{background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);border-color:var(--dsw-alias-border-l2);color:var(--wb-business)}@keyframes SWF62W_wb-writeback-wait{0%,to{opacity:1}50%{opacity:.45}}.SWF62W_cardActions{flex:none;align-items:center;margin-right:-3px;display:inline-flex}.SWF62W_chevron{min-width:0;height:26px;color:var(--wb-tertiary);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:10px;flex:0 auto;justify-content:center;align-items:center;gap:4px;padding:0 6px 0 4px;font-size:12px;font-weight:500;transition:background .13s,color .13s;display:inline-flex}.SWF62W_chevron>span{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}@container SWF62W_wb-pane (width<=306px){.SWF62W_chevron>span{display:none}.SWF62W_chevron{padding:0 4px}}.SWF62W_chevron:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_chevronOpen svg{rotate:180deg}.SWF62W_chevron svg{transition:rotate .3s var(--wb-jelly), scale .12s ease}.SWF62W_chevron:active svg{scale:.82}.SWF62W_field{box-sizing:border-box;background:var(--wb-hover);width:100%;color:inherit;font:inherit;text-align:left;caret-color:var(--wb-business);border:0;border-radius:6px;outline:none;margin:0;padding:0}.SWF62W_fieldTitle{letter-spacing:-.01em;color:var(--dsw-alias-label-primary);padding:0 4px;font-size:14px;font-weight:500;line-height:20px}.SWF62W_fieldDesc{height:19px;max-height:38px;transition:height .24s var(--wb-jelly);resize:none;color:var(--wb-tertiary);margin-top:5px;padding:0 4px;font-size:12px;line-height:19px;display:block;overflow-y:auto}.SWF62W_fieldTag{width:120px;color:var(--dsw-alias-label-secondary);background:var(--wb-hover);border:.5px solid #0000;border-radius:6px;flex:none;padding:2px 4px;font-size:11.5px;line-height:17px}.SWF62W_field::placeholder{color:var(--wb-caption);font-style:normal;font-weight:500}.SWF62W_field.SWF62W_fieldDesc::placeholder{font-style:italic}.SWF62W_editHint{color:var(--wb-caption);margin:6px 0 0;font-size:10px}.SWF62W_detailWrap{transition:grid-template-rows .24s var(--wb-jelly);grid-template-rows:0fr;display:grid}.SWF62W_detailWrap>.SWF62W_detail{visibility:hidden;min-height:0;max-height:50cqh;transition:visibility 0s linear .24s;overflow:hidden}.SWF62W_detailOpen{transition:grid-template-rows .38s var(--wb-jelly);grid-template-rows:1fr}.SWF62W_detailOpen>.SWF62W_detail{visibility:visible;transition:visibility;overflow:clip auto}.SWF62W_detail{padding:2px 0 2px 29px}.SWF62W_detailBar{justify-content:flex-end;align-items:center;gap:8px;margin-top:12px;display:flex}.SWF62W_detailDelete{width:24px;height:24px;color:var(--wb-caption);cursor:pointer;background:0 0;border:0;border-radius:8px;flex:none;justify-content:center;align-items:center;margin-right:-4px;padding:0;transition:background .13s,color .13s;display:inline-flex}.SWF62W_detailDelete:hover{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent);color:var(--dsw-alias-state-error-primary)}.SWF62W_detailDelete:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}@media (prefers-reduced-motion:reduce){.SWF62W_detailDelete{transition:none}}.SWF62W_detailHint{color:var(--wb-caption);margin:12px 0 0;font-size:10.5px}.SWF62W_detailEmpty{color:var(--wb-caption);margin:0;font-size:10.5px}.SWF62W_completionDivider{color:var(--wb-caption);letter-spacing:.02em;align-items:center;gap:8px;margin:0 0 12px;font-size:10px;font-weight:500;display:flex}.SWF62W_completionDivider:before,.SWF62W_completionDivider:after{content:\"\";background:var(--dsw-alias-border-l1);flex:1;height:.5px}.SWF62W_completionSummary{color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere;margin:0;font-size:11.5px;line-height:19px}.SWF62W_completionBlockTitle{color:var(--wb-caption);margin:0 0 6px;font-size:10px;font-weight:500}.SWF62W_completionBlock{margin:13px 0 0}.SWF62W_completionList{flex-direction:column;gap:6px;margin:0;padding:0;font-size:11px;line-height:17px;list-style:none;display:flex}.SWF62W_completionSteps{color:var(--dsw-alias-label-secondary);flex-direction:column;gap:6px;margin:0;padding-left:18px;font-size:11px;line-height:17px;display:flex}.SWF62W_completionSteps li::marker{color:var(--wb-caption)}.SWF62W_completionRow{align-items:baseline;gap:7px;display:flex}.SWF62W_filePath{color:var(--dsw-alias-label-primary);overflow-wrap:anywhere;font-size:10.5px}.SWF62W_filePurpose{color:var(--wb-tertiary);font-size:10.5px}.SWF62W_verifyCmd{color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere;font-size:10.5px}.SWF62W_verifyResult{white-space:nowrap;flex:none;font-size:10px;font-weight:500}.SWF62W_verifyPassed{color:var(--dsw-alias-state-success-primary)}.SWF62W_verifyFailed{color:var(--dsw-alias-state-error-primary)}.SWF62W_verifySkipped{color:var(--wb-caption)}.SWF62W_completionBy{color:var(--wb-caption);margin:11px 0 0;font-size:10px}.SWF62W_status{color:var(--wb-caption);margin:0;font-size:12px}.SWF62W_statusError{color:var(--dsw-alias-state-error-primary)}.SWF62W_retryBtn{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);height:30px;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:999px;align-self:flex-start;margin-top:8px;padding:0 13px;font-size:12.5px;transition:background .13s}.SWF62W_retryBtn:hover{background:var(--dsw-alias-bg-layer-2)}.SWF62W_retryBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_notice{background:color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent);color:var(--dsw-alias-label-primary);border-radius:12px;margin:0 0 9px;padding:9px 11px;font-size:12.5px;line-height:19px}.SWF62W_skeletonList{flex-direction:column;gap:9px;display:flex}.SWF62W_skeleton{background:var(--dsw-alias-bg-layer-1);border-radius:14px;height:132px;animation:1.6s ease-in-out infinite SWF62W_wb-pulse}@keyframes SWF62W_wb-pulse{0%,to{opacity:1}50%{opacity:.55}}@media (prefers-reduced-motion:reduce){.SWF62W_skeleton,.SWF62W_statusPip,.SWF62W_ghostBtnPending{animation:none}.SWF62W_card,.SWF62W_chevron,.SWF62W_chevron svg,.SWF62W_chip,.SWF62W_detailWrap,.SWF62W_detailWrap>.SWF62W_detail,.SWF62W_fieldDesc,.SWF62W_ghostBtn,.SWF62W_iconBtn,.SWF62W_mark,.SWF62W_primaryBtn,.SWF62W_retryBtn,.SWF62W_searchField,.SWF62W_tag{transition:none}.SWF62W_chevron:active svg{scale:none}}.SWF62W_empty{text-align:center;flex-direction:column;justify-content:center;align-items:center;padding:60px 24px;display:flex}.SWF62W_emptyGlyph{color:var(--wb-caption);margin-bottom:14px}.SWF62W_empty p{color:var(--wb-tertiary);margin:0;font-size:13px}.SWF62W_pane .SWF62W_emptyHint{color:var(--wb-caption);margin:6px 0 0;font-size:12px}";
+		const css$1 = ".SWF62W_pane{--wb-tertiary:color-mix(in srgb, var(--dsw-alias-label-secondary) 72%, var(--dsw-alias-bg-base));--wb-caption:color-mix(in srgb, var(--dsw-alias-label-secondary) 51%, var(--dsw-alias-bg-base));--wb-business:var(--dsw-alias-brand-primary);--wb-hover:color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);--wb-border-strong:color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);--wb-accent-wash:color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);--wb-accent:var(--dsw-alias-state-success-primary);--wb-accent-soft:color-mix(in srgb, var(--wb-accent) 15%, transparent);--wb-accent-fill:color-mix(in srgb, var(--wb-accent) 92%, var(--dsw-alias-bg-base));--wb-on-accent:var(--dsw-alias-bg-base);--wb-body:color-mix(in srgb, var(--dsw-alias-label-secondary) 92%, var(--dsw-alias-bg-base));--wb-card-shadow:0 1px 2px #0000000a, 0 8px 20px -14px #00000038;--wb-card-shadow-hover:0 2px 4px #0000000d, 0 12px 26px -14px #00000042;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);--wb-jelly:cubic-bezier(.34, 1.56, .64, 1);flex-direction:column;display:flex;container:SWF62W_wb-pane/inline-size}.SWF62W_toolbar{flex-direction:column;flex:none;padding:14px 16px 0;display:flex}.SWF62W_searchRow{align-items:center;gap:8px;display:flex}.SWF62W_searchField{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);min-width:0;height:36px;color:var(--wb-tertiary);border-radius:13px;flex:1;align-items:center;gap:8px;padding:0 11px;transition:border-color .15s,background .15s;display:flex}.SWF62W_searchField:focus-within{border-color:var(--wb-business);background:var(--dsw-alias-bg-base)}.SWF62W_searchInput{min-width:0;height:100%;color:var(--dsw-alias-label-primary);font:inherit;background:0 0;border:0;outline:none;flex:1;padding:0;font-size:13px}.SWF62W_searchInput::placeholder{color:var(--wb-caption)}.SWF62W_filterRow{align-items:center;gap:8px;margin-top:12px;display:flex}.SWF62W_chip{background:var(--dsw-alias-bg-layer-1);height:28px;color:var(--dsw-alias-label-secondary);font:inherit;cursor:pointer;white-space:nowrap;border:.5px solid #0000;border-radius:999px;flex:none;align-items:center;gap:5px;padding:0 11px;font-size:12.5px;transition:background .13s,color .13s;display:inline-flex}.SWF62W_chip:hover{background:var(--dsw-alias-bg-layer-2)}.SWF62W_chip:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_chipFlat{background:0 0;height:26px}.SWF62W_chipFlat:hover{background:var(--dsw-alias-interactive-bg-hover)}.SWF62W_chipActive{background:var(--wb-accent-wash);color:var(--wb-business)}.SWF62W_chipActive:hover{background:color-mix(in srgb, var(--dsw-alias-brand-primary) 20%, transparent)}.SWF62W_chipCount{color:inherit;opacity:.62;font-variant-numeric:tabular-nums}.SWF62W_titleIcon{vertical-align:-2px;flex:none;margin-right:6px}.SWF62W_filterSpacer{flex:1;min-width:0}.SWF62W_iconBtn{width:28px;height:28px;color:var(--wb-tertiary);cursor:pointer;background:0 0;border:0;border-radius:9px;flex:none;justify-content:center;align-items:center;transition:background .13s,color .13s;display:inline-flex}.SWF62W_iconBtn:hover{background:var(--wb-hover);color:var(--dsw-alias-label-primary)}.SWF62W_iconBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}button[data-dockkit-tab-close=dsh-plugin-workbench\\/workbench]{display:none}.SWF62W_scroller{scrollbar-gutter:stable;flex:1;min-height:0;padding:14px 14px 24px;overflow:auto;container-type:size}.SWF62W_groupLabel{color:var(--wb-caption);letter-spacing:.02em;align-items:center;gap:8px;margin:4px 4px 9px;font-size:11.5px;font-weight:500;display:flex}.SWF62W_groupLabel:after{content:\"\";background:var(--dsw-alias-border-l1);flex:1;height:.5px}.SWF62W_list+.SWF62W_groupLabel{margin-top:20px}.SWF62W_list{flex-direction:column;gap:9px;margin:0;padding:0;list-style:none;display:flex}.SWF62W_card{isolation:isolate;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);box-shadow:var(--wb-card-shadow);border-radius:14px;padding:12px 13px 13px;font-weight:500;transition:box-shadow .16s,border-color .16s;position:relative}.SWF62W_card:after{content:\"\";z-index:-1;border-radius:inherit;pointer-events:none;background-image:repeating-conic-gradient(from 0deg at 50% 50%, color-mix(in srgb, var(--wb-accent) 60%, transparent) 0deg 90deg, transparent 90deg 360deg);opacity:.22;background-size:6px 6px;position:absolute;inset:0;-webkit-mask-image:radial-gradient(76% 120% at 102% 2%,#000 0%,#000000a3 30%,#00000042 54%,#0000 78%);mask-image:radial-gradient(76% 120% at 102% 2%,#000 0%,#000000a3 30%,#00000042 54%,#0000 78%)}.SWF62W_card:hover{box-shadow:var(--wb-card-shadow-hover)}.SWF62W_cardComposing{border-color:color-mix(in srgb, var(--wb-accent) 46%, transparent)}.SWF62W_cardDone{box-shadow:0 1px 2px #00000008}.SWF62W_cardDone:hover{box-shadow:var(--wb-card-shadow-hover)}.SWF62W_cardArchived{background:color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent);border-style:dashed}.SWF62W_cardArchived .SWF62W_mark{opacity:.55}.SWF62W_cardArchived .SWF62W_titleText{color:var(--wb-tertiary)}.SWF62W_cardHead{align-items:flex-start;gap:6px;display:flex}.SWF62W_mark{width:20px;height:20px;color:var(--dsw-alias-state-idle-primary);background:0 0;border-radius:999px;flex:none;place-items:center;margin-top:1px;transition:background .16s,color .16s;display:grid}.SWF62W_markDot{background:currentColor;border-radius:50%;width:9px;height:9px}.SWF62W_markDone,.SWF62W_markBusy{background:var(--wb-accent-soft);color:var(--wb-accent)}.SWF62W_cardBody{flex-direction:column;flex:1;min-width:0;display:flex}.SWF62W_titleRow{align-items:center;gap:6px;min-width:0;display:flex}.SWF62W_titleText{min-width:0;color:var(--dsw-alias-label-primary);font:inherit;letter-spacing:-.01em;text-align:left;cursor:text;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;border-radius:6px;flex:1;margin:0;padding:0 4px;font-size:14px;font-weight:500;line-height:20px;overflow:hidden}.SWF62W_titleText:hover{background:var(--wb-hover)}.SWF62W_descText{-webkit-line-clamp:2;line-clamp:2;color:var(--wb-body);font:inherit;text-align:left;white-space:pre-wrap;cursor:text;overflow-wrap:anywhere;background:0 0;border:0;border-radius:6px;-webkit-box-orient:vertical;margin:5px 0 0;padding:0 4px;font-size:12px;line-height:19px;display:-webkit-box;overflow:hidden}.SWF62W_descText:hover{background:var(--wb-hover)}.SWF62W_descEmpty{color:var(--wb-caption);font-style:italic}.SWF62W_metaRow{min-width:0;color:var(--wb-body);align-items:center;gap:5px;margin-top:12px;margin-left:-26px;font-size:11.5px;line-height:17px;display:flex}.SWF62W_metaRow>svg{color:var(--wb-caption);flex:none}.SWF62W_metaLabel{color:inherit;flex:none}.SWF62W_metaSpacer{flex:1;min-width:0}.SWF62W_tag{max-width:150px;color:var(--wb-body);font:inherit;cursor:text;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:.5px solid #0000;border-radius:6px;flex:none;align-items:center;padding:2px 4px;font-size:11.5px;line-height:17px;transition:background .13s,color .13s;display:inline-flex;overflow:hidden}.SWF62W_tag:hover{background:var(--wb-hover);color:var(--dsw-alias-label-secondary)}.SWF62W_tagEmpty{color:var(--wb-caption)}.SWF62W_statusPill{white-space:nowrap;border:.5px solid #0000;border-radius:999px;flex:none;align-items:center;gap:4px;height:21px;padding:0 8px 0 6px;font-size:10.5px;font-weight:500;line-height:1;display:inline-flex}.SWF62W_statusPillDone{border-color:color-mix(in srgb, var(--wb-accent) 46%, transparent);background:var(--wb-accent-soft);color:color-mix(in srgb, var(--wb-accent) 86%, var(--dsw-alias-label-primary))}.SWF62W_statusPillBusy{border-color:color-mix(in srgb, var(--wb-business) 30%, transparent);background:color-mix(in srgb, var(--wb-business) 10%, transparent);color:var(--wb-business)}.SWF62W_statusPip{background:currentColor;border-radius:50%;width:5px;height:5px;animation:1.8s ease-in-out infinite SWF62W_wb-status-breathe}@keyframes SWF62W_wb-status-breathe{0%,to{opacity:1}50%{opacity:.35}}.SWF62W_archivedBadge{background:color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);height:19px;color:var(--wb-caption);white-space:nowrap;border-radius:999px;flex:none;align-items:center;padding:0 7px;font-size:10px;line-height:1;display:inline-flex}.SWF62W_time{color:var(--wb-caption);font-variant-numeric:tabular-nums;flex:none;font-size:10.5px}.SWF62W_cardFoot{align-items:center;gap:6px;margin-top:14px;margin-left:-26px;display:flex}.SWF62W_footSpacer{flex:1;min-width:0}.SWF62W_primaryBtn{background:var(--wb-accent-fill);height:26px;color:var(--wb-on-accent);font:inherit;cursor:pointer;box-shadow:0 1px 2px color-mix(in srgb, var(--wb-accent) 28%, transparent);border:0;border-radius:10px;flex:none;justify-content:center;align-items:center;gap:5px;padding:0 8px;font-size:12px;font-weight:500;transition:filter .13s,box-shadow .16s;display:inline-flex}.SWF62W_primaryBtn:hover{filter:brightness(1.06);box-shadow:0 2px 6px color-mix(in srgb, var(--wb-accent) 34%, transparent)}.SWF62W_primaryBtn:active{filter:brightness(.95)}.SWF62W_primaryBtn:focus-visible{outline:2px solid var(--wb-accent);outline-offset:1px}.SWF62W_ghostBtn{border:.5px solid var(--dsw-alias-border-l2);background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);height:26px;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:10px;flex:none;justify-content:center;align-items:center;gap:5px;padding:0 8px;font-size:12px;font-weight:500;transition:background .13s,border-color .13s,color .13s;display:inline-flex}.SWF62W_ghostBtn:hover{background:var(--dsw-alias-bg-base);border-color:var(--wb-border-strong)}.SWF62W_ghostBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_ghostBtnBusy{border-color:color-mix(in srgb, var(--wb-business) 38%, transparent);color:var(--wb-business)}.SWF62W_ghostBtnBusy:hover{color:var(--wb-business)}.SWF62W_ghostBtnPending{color:var(--wb-business);cursor:default;animation:1.6s ease-in-out infinite SWF62W_wb-writeback-wait}.SWF62W_ghostBtnPending:hover{background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);border-color:var(--dsw-alias-border-l2);color:var(--wb-business)}@keyframes SWF62W_wb-writeback-wait{0%,to{opacity:1}50%{opacity:.45}}.SWF62W_archiveBtn{height:26px;color:var(--wb-tertiary);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:10px;flex:none;justify-content:center;align-items:center;gap:5px;padding:0 7px;font-size:12px;font-weight:500;transition:background .13s,color .13s;display:inline-flex}.SWF62W_archiveBtn:hover{background:var(--wb-hover);color:var(--dsw-alias-label-primary)}.SWF62W_archiveBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_archiveBtnOn,.SWF62W_archiveBtnOn:hover{color:var(--wb-business)}.SWF62W_cardActions{flex:none;align-items:center;margin-right:-3px;display:inline-flex}.SWF62W_chevron{min-width:0;height:26px;color:var(--wb-tertiary);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:10px;flex:0 auto;justify-content:center;align-items:center;gap:4px;padding:0 6px 0 4px;font-size:12px;font-weight:500;transition:background .13s,color .13s;display:inline-flex}.SWF62W_chevron>span{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}@container SWF62W_wb-pane (width<=340px){.SWF62W_chevron>span,.SWF62W_archiveBtn>span{display:none}.SWF62W_chevron{padding:0 4px}.SWF62W_archiveBtn{padding:0 6px}}.SWF62W_chevron:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_chevronOpen svg{rotate:180deg}.SWF62W_chevron svg{transition:rotate .3s var(--wb-jelly), scale .12s ease}.SWF62W_chevron:active svg{scale:.82}.SWF62W_field{box-sizing:border-box;background:var(--wb-hover);width:100%;color:inherit;font:inherit;text-align:left;caret-color:var(--wb-business);border:0;border-radius:6px;outline:none;margin:0;padding:0}.SWF62W_fieldTitle{letter-spacing:-.01em;color:var(--dsw-alias-label-primary);padding:0 4px;font-size:14px;font-weight:500;line-height:20px}.SWF62W_fieldDesc{height:19px;max-height:38px;transition:height .24s var(--wb-jelly);resize:none;color:var(--wb-tertiary);margin-top:5px;padding:0 4px;font-size:12px;line-height:19px;display:block;overflow-y:auto}.SWF62W_fieldTag{width:120px;color:var(--dsw-alias-label-secondary);background:var(--wb-hover);border:.5px solid #0000;border-radius:6px;flex:none;padding:2px 4px;font-size:11.5px;line-height:17px}.SWF62W_field::placeholder{color:var(--wb-caption);font-style:normal;font-weight:500}.SWF62W_field.SWF62W_fieldDesc::placeholder{font-style:italic}.SWF62W_editHint{color:var(--wb-caption);margin:6px 0 0;font-size:10px}.SWF62W_detailWrap{transition:grid-template-rows .24s var(--wb-jelly);grid-template-rows:0fr;display:grid}.SWF62W_detailWrap>.SWF62W_detail{visibility:hidden;min-height:0;max-height:50cqh;transition:visibility 0s linear .24s;overflow:hidden}.SWF62W_detailOpen{transition:grid-template-rows .38s var(--wb-jelly);grid-template-rows:1fr}.SWF62W_detailOpen>.SWF62W_detail{visibility:visible;transition:visibility;overflow:clip auto}.SWF62W_detail{padding:6px 0 2px}.SWF62W_detailHint{color:var(--wb-caption);margin:12px 0 0;font-size:10.5px}.SWF62W_detailEmpty{color:var(--wb-tertiary);opacity:.7;justify-content:center;align-items:center;padding:4px 0 6px;display:flex}.SWF62W_detailEmpty>svg{width:26px;height:26px}.SWF62W_completionDivider{color:var(--wb-caption);letter-spacing:.02em;align-items:center;gap:8px;margin:0 0 12px;font-size:10px;font-weight:500;display:flex}.SWF62W_completionDivider:before,.SWF62W_completionDivider:after{content:\"\";background:var(--dsw-alias-border-l1);flex:1;height:.5px}.SWF62W_completionSummary{color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere;margin:0;font-size:11.5px;line-height:19px}.SWF62W_completionBlockTitle{color:var(--wb-caption);margin:0 0 6px;font-size:10px;font-weight:500}.SWF62W_completionBlock{margin:13px 0 0}.SWF62W_completionList{flex-direction:column;gap:6px;margin:0;padding:0;font-size:11px;line-height:17px;list-style:none;display:flex}.SWF62W_completionSteps{color:var(--dsw-alias-label-secondary);flex-direction:column;gap:6px;margin:0;padding-left:18px;font-size:11px;line-height:17px;display:flex}.SWF62W_completionSteps li::marker{color:var(--wb-caption)}.SWF62W_completionRow{align-items:baseline;gap:7px;display:flex}.SWF62W_filePath{color:var(--dsw-alias-label-primary);overflow-wrap:anywhere;font-size:10.5px}.SWF62W_filePurpose{color:var(--wb-tertiary);font-size:10.5px}.SWF62W_verifyCmd{color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere;font-size:10.5px}.SWF62W_verifyResult{white-space:nowrap;flex:none;font-size:10px;font-weight:500}.SWF62W_verifyPassed{color:var(--dsw-alias-state-success-primary)}.SWF62W_verifyFailed{color:var(--dsw-alias-state-error-primary)}.SWF62W_verifySkipped{color:var(--wb-caption)}.SWF62W_completionBy{color:var(--wb-caption);margin:11px 0 0;font-size:10px}.SWF62W_status{color:var(--wb-caption);margin:0;font-size:12px}.SWF62W_statusError{color:var(--dsw-alias-state-error-primary)}.SWF62W_retryBtn{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);height:30px;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:999px;align-self:flex-start;margin-top:8px;padding:0 13px;font-size:12.5px;transition:background .13s}.SWF62W_retryBtn:hover{background:var(--dsw-alias-bg-layer-2)}.SWF62W_retryBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.SWF62W_notice{background:color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent);color:var(--dsw-alias-label-primary);border-radius:12px;margin:0 0 9px;padding:9px 11px;font-size:12.5px;line-height:19px}.SWF62W_skeletonList{flex-direction:column;gap:9px;display:flex}.SWF62W_skeleton{background:var(--dsw-alias-bg-layer-1);border-radius:14px;height:132px;animation:1.6s ease-in-out infinite SWF62W_wb-pulse}@keyframes SWF62W_wb-pulse{0%,to{opacity:1}50%{opacity:.55}}@media (prefers-reduced-motion:reduce){.SWF62W_skeleton,.SWF62W_statusPip,.SWF62W_ghostBtnPending{animation:none}.SWF62W_card,.SWF62W_archiveBtn,.SWF62W_chevron,.SWF62W_chevron svg,.SWF62W_chip,.SWF62W_detailWrap,.SWF62W_detailWrap>.SWF62W_detail,.SWF62W_fieldDesc,.SWF62W_ghostBtn,.SWF62W_iconBtn,.SWF62W_mark,.SWF62W_primaryBtn,.SWF62W_retryBtn,.SWF62W_searchField,.SWF62W_tag{transition:none}.SWF62W_chevron:active svg{scale:none}}.SWF62W_empty{text-align:center;flex-direction:column;justify-content:center;align-items:center;padding:60px 24px;display:flex}.SWF62W_emptyGlyph{color:var(--wb-caption);margin-bottom:14px}.SWF62W_empty p{color:var(--wb-tertiary);margin:0;font-size:13px}.SWF62W_pane .SWF62W_emptyHint{color:var(--wb-caption);margin:6px 0 0;font-size:12px}";
 		const tagId$1 = "dsh-plugin-workbench/WorkbenchTab.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4497,6 +4512,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var WorkbenchTab_module_css_default = {
+			"archiveBtn": "SWF62W_archiveBtn",
+			"archiveBtnOn": "SWF62W_archiveBtnOn",
 			"archivedBadge": "SWF62W_archivedBadge",
 			"card": "SWF62W_card",
 			"cardActions": "SWF62W_cardActions",
@@ -4523,8 +4540,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			"descEmpty": "SWF62W_descEmpty",
 			"descText": "SWF62W_descText",
 			"detail": "SWF62W_detail",
-			"detailBar": "SWF62W_detailBar",
-			"detailDelete": "SWF62W_detailDelete",
 			"detailEmpty": "SWF62W_detailEmpty",
 			"detailHint": "SWF62W_detailHint",
 			"detailOpen": "SWF62W_detailOpen",
@@ -4831,18 +4846,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				setExpanded((current) => current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]);
 			};
 			/**
-			* Delete one item, after asking.
+			* File one item away, or bring it back (§9.31).
 			*
-			* Deletion is the only irreversible thing this pane offers — everything else is
-			* an edit to a record that keeps its identity — so it is the one action that
-			* gets a confirmation. The text names the title, because a list of similar
-			* items is exactly where a misclick happens.
-			* @param item - the record to delete.
+			* No confirmation, and no `window.confirm`: archiving destroys nothing and the
+			* same control reverses it, which is precisely the property the delete button
+			* it replaced did not have.
+			* @param item - the record to archive or restore.
 			*/
-			const removeItem = async (item) => {
-				if (!window.confirm(t("action.deleteConfirm", { title: item.title }))) return;
+			const archiveItem = async (item) => {
 				setNotice(void 0);
-				const result = await store.remove(item.id);
+				const result = await store.setArchived(item, !item.archived);
 				if (result.code !== "ok") report(result);
 			};
 			if (workspaceItems.length === 0) return (0, react_jsx_runtime.jsx)("div", {
@@ -5006,8 +5019,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 									onToggle: () => {
 										toggleExpanded(item.id);
 									},
-									onDelete: () => {
-										removeItem(item);
+									onArchive: () => {
+										archiveItem(item);
 									},
 									onRequestComplete: () => {
 										requestWriteBack(item);
@@ -5045,8 +5058,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 									onToggle: () => {
 										toggleExpanded(item.id);
 									},
-									onDelete: () => {
-										removeItem(item);
+									onArchive: () => {
+										archiveItem(item);
 									},
 									onRequestComplete: () => {
 										requestWriteBack(item);
@@ -5066,7 +5079,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			});
 		}
 		/** One work item. */
-		function Card({ item, t, editing, open, pending = false, onEdit, onCommit, onCancel, onToggle, onDelete, onRequestComplete, onFill }) {
+		function Card({ item, t, editing, open, pending = false, onEdit, onCommit, onCancel, onToggle, onArchive, onRequestComplete, onFill }) {
 			const isEditing = (field) => editing.kind === "field" && editing.id === item.id && editing.field === field;
 			const draftOf = (field) => editing.kind === "field" && editing.id === item.id && editing.field === field ? editing.draft : "";
 			const classes = [WorkbenchTab_module_css_default.card];
@@ -5226,6 +5239,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 										children: [(0, react_jsx_runtime.jsx)(SummaryGlyph, {}), (0, react_jsx_runtime.jsx)("span", { children: t("card.summarize") })]
 									}),
 									(0, react_jsx_runtime.jsx)("span", { className: WorkbenchTab_module_css_default.footSpacer }),
+									(0, react_jsx_runtime.jsxs)("button", {
+										type: "button",
+										className: item.archived ? `${WorkbenchTab_module_css_default.archiveBtn} ${WorkbenchTab_module_css_default.archiveBtnOn}` : WorkbenchTab_module_css_default.archiveBtn,
+										title: t(item.archived ? "card.unarchive" : "card.archive"),
+										"aria-label": t(item.archived ? "card.unarchive" : "card.archive"),
+										onClick: onArchive,
+										children: [(0, react_jsx_runtime.jsx)(ArchiveGlyph, {}), (0, react_jsx_runtime.jsx)("span", { children: t(item.archived ? "card.unarchive" : "card.archive") })]
+									}),
 									(0, react_jsx_runtime.jsx)("span", {
 										className: WorkbenchTab_module_css_default.cardActions,
 										children: (0, react_jsx_runtime.jsxs)("button", {
@@ -5251,31 +5272,52 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 								className: WorkbenchTab_module_css_default.completionDivider,
 								children: t("completion.title")
 							}),
-							item.completion === void 0 ? (0, react_jsx_runtime.jsx)("p", {
-								className: WorkbenchTab_module_css_default.detailEmpty,
-								children: t("detail.noCompletion")
-							}) : (0, react_jsx_runtime.jsx)(Completion, {
+							item.completion === void 0 ? (0, react_jsx_runtime.jsx)(CompletionEmpty, { t }) : (0, react_jsx_runtime.jsx)(Completion, {
 								item,
 								t
 							}),
 							item.status !== "done" && (0, react_jsx_runtime.jsx)("p", {
 								className: WorkbenchTab_module_css_default.detailHint,
 								children: t(pending ? "writeback.pending" : item.status === "in_progress" ? "writeback.hintRunning" : "writeback.hintQueued")
-							}),
-							(0, react_jsx_runtime.jsx)("div", {
-								className: WorkbenchTab_module_css_default.detailBar,
-								children: (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: WorkbenchTab_module_css_default.detailDelete,
-									title: t("action.delete"),
-									"aria-label": t("action.delete"),
-									onClick: onDelete,
-									children: (0, react_jsx_runtime.jsx)(TrashGlyph, {})
-								})
 							})
 						]
 					})
 				})]
+			});
+		}
+		/**
+		* The expanded area with nothing written back yet (§9.31).
+		*
+		* One icon, no sentence: the divider above it already says 待办总结, so a line of
+		* copy underneath only restates the heading and the rule. The words survive as
+		* the icon's accessible name, which is where they still earn their keep.
+		*/
+		function CompletionEmpty({ t }) {
+			return (0, react_jsx_runtime.jsx)("div", {
+				className: WorkbenchTab_module_css_default.detailEmpty,
+				role: "img",
+				"aria-label": t("detail.noCompletion"),
+				children: (0, react_jsx_runtime.jsxs)("svg", {
+					width: "24",
+					height: "24",
+					viewBox: "0 0 24 24",
+					fill: "none",
+					"aria-hidden": "true",
+					children: [(0, react_jsx_runtime.jsx)("rect", {
+						x: "3",
+						y: "4.5",
+						width: "18",
+						height: "15",
+						rx: "4",
+						stroke: "currentColor",
+						strokeWidth: "1.3"
+					}), (0, react_jsx_runtime.jsx)("path", {
+						d: "M3 9.5h18M7.5 14h7",
+						stroke: "currentColor",
+						strokeWidth: "1.3",
+						strokeLinecap: "round"
+					})]
+				})
 			});
 		}
 		/** The structured write-back summary, once one exists. */
@@ -5553,8 +5595,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		*/
 		function CalendarGlyph() {
 			return (0, react_jsx_runtime.jsxs)("svg", {
-				width: "12",
-				height: "12",
+				width: "15",
+				height: "15",
 				viewBox: "0 0 16 16",
 				fill: "none",
 				"aria-hidden": "true",
@@ -5654,8 +5696,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				})]
 			});
 		}
-		/** Delete: a lidded bin, drawn at the fill glyph's weight so the pair matches. */
-		function TrashGlyph() {
+		/**
+		* Archive: a box with its lid laid flat and an arrow dropping into it (§9.31).
+		*
+		* Drawn at the same 13px/stroke-1.4 weight as the row's other glyphs, so the
+		* control that replaced delete does not read as a different kind of thing.
+		*/
+		function ArchiveGlyph() {
 			return (0, react_jsx_runtime.jsxs)("svg", {
 				width: "13",
 				height: "13",
@@ -5663,36 +5710,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				fill: "none",
 				"aria-hidden": "true",
 				children: [
-					(0, react_jsx_runtime.jsx)("path", {
-						d: "M2.8 4.4h10.4",
-						stroke: "currentColor",
-						strokeWidth: "1.4",
-						strokeLinecap: "round"
-					}),
-					(0, react_jsx_runtime.jsx)("path", {
-						d: "M6.4 4.4V3.1a.7.7 0 0 1 .7-.7h1.8a.7.7 0 0 1 .7.7v1.3",
-						stroke: "currentColor",
-						strokeWidth: "1.4",
-						strokeLinecap: "round",
-						strokeLinejoin: "round"
-					}),
-					(0, react_jsx_runtime.jsx)("path", {
-						d: "M4.3 4.4l.5 7.8a1.5 1.5 0 0 0 1.5 1.4h3.4a1.5 1.5 0 0 0 1.5-1.4l.5-7.8",
-						stroke: "currentColor",
-						strokeWidth: "1.4",
-						strokeLinecap: "round",
-						strokeLinejoin: "round"
-					}),
-					(0, react_jsx_runtime.jsx)("path", {
-						d: "M6.7 6.9v3.9M9.3 6.9v3.9",
+					(0, react_jsx_runtime.jsx)("rect", {
+						x: "2.4",
+						y: "3",
+						width: "11.2",
+						height: "3.1",
+						rx: "1",
 						stroke: "currentColor",
 						strokeWidth: "1.3",
-						strokeLinecap: "round"
+						strokeLinejoin: "round"
+					}),
+					(0, react_jsx_runtime.jsx)("path", {
+						d: "M3.5 6.1v5.4a1.4 1.4 0 0 0 1.4 1.4h6.2a1.4 1.4 0 0 0 1.4-1.4V6.1",
+						stroke: "currentColor",
+						strokeWidth: "1.3",
+						strokeLinecap: "round",
+						strokeLinejoin: "round"
+					}),
+					(0, react_jsx_runtime.jsx)("path", {
+						d: "M8 8.2v3.4M6.5 10.1L8 11.6l1.5-1.5",
+						stroke: "currentColor",
+						strokeWidth: "1.3",
+						strokeLinecap: "round",
+						strokeLinejoin: "round"
 					})
 				]
 			});
 		}
-		/** The empty state's mark: a sheet with a line of text, above the sentence. */
+		/** The empty completion state: a sheet with nothing written on it (§9.31). */
 		function EmptyGlyph() {
 			return (0, react_jsx_runtime.jsxs)("svg", {
 				className: WorkbenchTab_module_css_default.emptyGlyph,
@@ -5821,8 +5866,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				case "all": return { archived: "exclude" };
 			}
 		}
-		/** Replace one record in a list, leaving the list untouched when it holds none. */
-		function replace(items, next) {
+		/**
+		* Whether a record belongs in a tier, by the same rule `filterToRequest` sends
+		* to the Host.
+		*
+		* Needed locally because an archive write can answer "does this still belong in
+		* the list I am looking at?" — and for the daily tiers the answer is no, which
+		* is a removal rather than a merge.
+		* @param item - the record as the Host returned it.
+		* @param filter - the tier on screen.
+		* @returns whether the record is still part of that tier.
+		*/
+		function matchesFilter(item, filter) {
+			switch (filter) {
+				case "active": return !item.archived && item.status !== "done";
+				case "done": return !item.archived && item.status === "done";
+				case "archived": return item.archived;
+				case "all": return !item.archived;
+			}
+		}
+		/** Replace one record in a list, leaving the list untouched when it holds none. */ function replace(items, next) {
 			const at = items.findIndex((item) => item.id === next.id);
 			if (at < 0) return items;
 			const copy = items.slice();
@@ -6002,6 +6065,45 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					expectedUpdateAt: item.updateAt
 				});
 				await this.settle(result);
+				return result;
+			}
+			/**
+			* File an item away, or bring it back (DESIGN.md §4.7, §9.31).
+			*
+			* The one write that can move a record between tiers, so it is not merged the
+			* way a field edit is: an archived item leaves 全部/未完成/已完成 and turns up
+			* under 已归档, and the totals have to move with it — or the filter row would go
+			* on advertising the sizes it had before the click. The item is dropped from
+			* the list outright when the active filter stops matching it.
+			* @param item - the item whose archived state changes.
+			* @param archived - `true` to file it away, `false` to bring it back.
+			* @returns the Host's result union.
+			*/
+			async setArchived(item, archived) {
+				if (item.archived === archived) return {
+					code: "ok",
+					item
+				};
+				const result = await this.gateway.archive({
+					id: item.id,
+					workspaceId: this.activeId,
+					archived,
+					expectedUpdateAt: item.updateAt
+				});
+				if (result.code !== "ok") return result;
+				if (this.getSnapshot().query !== "") {
+					await this.load();
+					return result;
+				}
+				const current = this.getSnapshot();
+				const visible = current.items.some((existing) => existing.id === item.id);
+				const counts = tally(tally(current.counts, item, -1), result.item, 1);
+				const shown = matchesFilter(result.item, current.filter);
+				this.patch({
+					items: shown ? [result.item, ...current.items.filter((existing) => existing.id !== item.id)] : current.items.filter((existing) => existing.id !== item.id),
+					total: Math.max(0, current.total + (shown === visible ? 0 : shown ? 1 : -1)),
+					counts
+				});
 				return result;
 			}
 			/**
@@ -6345,6 +6447,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			"card.fillTitle": "把这条工作项填入对话框输入框",
 			"card.fill": "发送",
 			"card.summarize": "总结",
+			"card.archive": "归档",
+			"card.unarchive": "取消归档",
 			"group.active": "未完成",
 			"group.done": "已完成",
 			"group.archived": "已归档",
@@ -6414,6 +6518,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			"card.fillTitle": "Put this work item into the composer input",
 			"card.fill": "Send",
 			"card.summarize": "Summarize",
+			"card.archive": "Archive",
+			"card.unarchive": "Restore",
 			"group.active": "Open",
 			"group.done": "Done",
 			"group.archived": "Archived",
@@ -6608,6 +6714,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				create: async (request) => unwrap(await ctx.remote.workbench.create(request)),
 				setDesc: async (request) => unwrap(await ctx.remote.workbench.setDesc(request)),
 				update: async (request) => unwrap(await ctx.remote.workbench.update(request)),
+				archive: async (request) => unwrap(await ctx.remote.workbench.archive(request)),
 				requestComplete: async (request) => unwrap(await ctx.remote.workbench.requestComplete(request)),
 				delete: async (request) => unwrap(await ctx.remote.workbench.delete(request))
 			};

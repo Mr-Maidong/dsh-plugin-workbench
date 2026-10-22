@@ -67,7 +67,7 @@
     "build:client": "tsc -b tsconfig.client.json && tsdown --config tsdown.client.config.ts",
     "build": "pnpm build:host && pnpm build:client",
     "typecheck": "tsc -b tsconfig.host.json && tsc -b tsconfig.client.json",
-    "test": "pnpm build && node --test packages/workbench/tests/field-metrics.spec.ts packages/workbench/tests/motion.spec.ts packages/workbench/tests/fuzzy.spec.ts packages/workbench/tests/host-search.spec.ts packages/workbench/tests/host-write.spec.ts packages/workbench/tests/remote-contract.spec.ts packages/workbench/tests/seed.spec.ts packages/workbench/tests/completion.spec.ts packages/workbench/tests/write-back.spec.ts packages/workbench/tests/card-time.spec.ts packages/workbench/tests/state.spec.ts packages/workbench/tests/tab-guardian.spec.ts packages/workbench/tests/workspace-source.spec.ts packages/workbench/tests/snapshot-identity.spec.ts",
+    "test": "pnpm build && node --test packages/workbench/tests/field-metrics.spec.ts packages/workbench/tests/motion.spec.ts packages/workbench/tests/fuzzy.spec.ts packages/workbench/tests/host-search.spec.ts packages/workbench/tests/host-write.spec.ts packages/workbench/tests/archive.spec.ts packages/workbench/tests/remote-contract.spec.ts packages/workbench/tests/seed.spec.ts packages/workbench/tests/completion.spec.ts packages/workbench/tests/write-back.spec.ts packages/workbench/tests/card-time.spec.ts packages/workbench/tests/state.spec.ts packages/workbench/tests/tab-guardian.spec.ts packages/workbench/tests/workspace-source.spec.ts packages/workbench/tests/snapshot-identity.spec.ts",
     "clean": "node --eval \"for (const p of ['packages/workbench/lib']) require('node:fs').rmSync(p, { recursive: true, force: true })\""
   },
   "dependencies": {

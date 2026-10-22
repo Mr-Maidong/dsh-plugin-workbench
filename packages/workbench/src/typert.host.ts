@@ -69,6 +69,12 @@ export const TYPERT = {
         },
         {
           kind: 'method',
+          name: 'archive',
+          signature: "@Remote('archive') archive(request: WorkbenchArchiveRequest): Promise<WorkbenchWriteValue>",
+          summary: 'File a work item away, or bring it back.',
+        },
+        {
+          kind: 'method',
           name: 'delete',
           signature: "@Remote('delete') delete(request: WorkbenchDeleteRequest): Promise<WorkbenchDeleteValue>",
           summary: 'Delete one work item.',
@@ -122,6 +128,10 @@ export const TYPERT = {
         {
           name: 'WorkbenchDeleteRequest',
           declaration: 'export interface WorkbenchDeleteRequest { readonly workspaceId: string; readonly id: WorkItemId }',
+        },
+        {
+          name: 'WorkbenchArchiveRequest',
+          declaration: 'export interface WorkbenchArchiveRequest { readonly workspaceId: string; readonly id: WorkItemId; readonly archived: boolean; readonly expectedUpdateAt?: string }',
         },
         {
           name: 'WorkbenchWriteValue',

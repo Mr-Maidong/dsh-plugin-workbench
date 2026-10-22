@@ -41,6 +41,11 @@ export declare const TYPERT: {
                 readonly summary: "Advance a work item to in progress, or retry its write-back idempotently.";
             }, {
                 readonly kind: "method";
+                readonly name: "archive";
+                readonly signature: "@Remote('archive') archive(request: WorkbenchArchiveRequest): Promise<WorkbenchWriteValue>";
+                readonly summary: "File a work item away, or bring it back.";
+            }, {
+                readonly kind: "method";
                 readonly name: "delete";
                 readonly signature: "@Remote('delete') delete(request: WorkbenchDeleteRequest): Promise<WorkbenchDeleteValue>";
                 readonly summary: "Delete one work item.";
@@ -81,6 +86,9 @@ export declare const TYPERT: {
             }, {
                 readonly name: "WorkbenchDeleteRequest";
                 readonly declaration: "export interface WorkbenchDeleteRequest { readonly workspaceId: string; readonly id: WorkItemId }";
+            }, {
+                readonly name: "WorkbenchArchiveRequest";
+                readonly declaration: "export interface WorkbenchArchiveRequest { readonly workspaceId: string; readonly id: WorkItemId; readonly archived: boolean; readonly expectedUpdateAt?: string }";
             }, {
                 readonly name: "WorkbenchWriteValue";
                 readonly declaration: "export type WorkbenchWriteValue = { readonly code: 'ok'; readonly item: WorkItemRecord } | { readonly code: 'not_found'; readonly id: string } | { readonly code: 'conflict'; readonly current: WorkItemRecord } | { readonly code: 'invalid'; readonly message: string }";

@@ -358,8 +358,7 @@ node repro/serve.mjs 47811        # http://localhost:47811/repro/card-preview.ht
 展开区在 `max-height: 50cqh` 处自己滚（§9.27），但滚动条原来交给宿主样式，属于「要用才
 出现」的浮层。验收要求它一直显示，做法是把这条滚动条接管过来：
 
-- `scrollbar-gutter: stable` —— 不管内容有没有超限，先把 6px 的槽留出来。否则摘要刚超过
-  限高时，文字会因为滚动条出现而横向重排一次。
+- `scrollbar-gutter: stable` —— 不管内容有没有超限，先把 6px 的槽留出来。
 - `::-webkit-scrollbar` 6px、透明轨道、圆角 3px 的拇指，墨色走两个新令牌
   `--wb-scroll-thumb`（16% 主墨）/ `--wb-scroll-thumb-hover`（30%）。拇指是控件不是文字，
   所以不用 caption/tertiary 那两级文字色。
@@ -367,8 +366,37 @@ node repro/serve.mjs 47811        # http://localhost:47811/repro/card-preview.ht
   标准绘制，并忽略 `::-webkit-scrollbar` 那一组，而圆角拇指只有 webkit 这套画得出来。本插件
   只在 Chromium 里跑，没有第二条路要照顾。
 
-`overflow-y: auto` 仍只在展开态上（§9.27 的理由不变：折起来时用 `overflow: hidden`，否则
-折叠过程中会闪一下自己的滚动条）。
+`overflow-y: auto` 何时生效见 §9.33。
+
+## §9.33 展开动画期间不许出现滚动条
+
+接上一条之后，验收又抓到一个更细的问题：点「展开详情」的瞬间会先闪一下滚动条，待办总结的
+宽度跟着变一次。
+
+原因是 `overflow-y: auto` 跟着 `detailOpen` 类一起打开 —— 也就是弹性的**第一帧**。那时折叠
+行才几像素高、摘要已有四百多像素，于是必然溢出：拇指被画出来，再随着高度长上去而缩掉、消
+失。`scrollbar-gutter: stable` 只解决了「宽度会不会变」，没解决「拇指提前出现」，两者叠加
+就成了一次明显的视觉抖动。
+
+改法是把滚动权的交接推迟到折叠结束：
+
+```css
+/* 常驻规则：先裁着，槽照样留着 */
+.detailWrap > .detail { overflow: hidden; scrollbar-gutter: stable; }
+
+/* 展开态：380ms 弹簧落地后，用一个 0 长度的动画把 overflow-y 交给 auto */
+.detailOpen > .detail { animation: wb-detail-scrollable 1ms linear 400ms forwards; }
+@keyframes wb-detail-scrollable { to { overflow-y: auto; } }
+```
+
+- 用动画而不是 `transition`：`overflow` 是离散属性，`transition` 需要
+  `transition-behavior: allow-discrete` 且结束点不好表达；`animation … forwards` 天然是
+  「等一会儿，然后就此定住」。
+- 槽在**所有**状态下都留着（折叠态也留），所以文字列从一开始就是窄 6px 的那一版，拇指出现
+  时不重排。实测同一张卡：`overflow-y` 在 0/80/300ms 是 `hidden`、650ms 是 `auto`，而
+  `clientWidth` 全程 303 —— 宽度抖动没有了。
+- `prefers-reduced-motion` 下折叠本身没有过渡（`.detailWrap` 的 transition 被关掉），延迟
+  交接就只是白等 400ms，所以在那个块里直接 `animation: none; overflow-y: auto`。
 
 ## §13.8 遗留欠账
 

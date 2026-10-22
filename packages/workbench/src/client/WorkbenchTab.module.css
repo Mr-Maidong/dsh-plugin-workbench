@@ -1219,6 +1219,11 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   min-height: 0;
   max-height: 50cqh;
   visibility: hidden;
+  /* §9.33: the lane is reserved at EVERY style, folded or not, so the text
+     column is already 6px narrower before the bar can possibly appear. This is
+     what stops the width jump the accept pass caught: without it the summary
+     reflows the instant the thumb arrives. */
+  scrollbar-gutter: stable;
   transition: visibility 0s linear 240ms;
 }
 
@@ -1227,26 +1232,36 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   transition: grid-template-rows 380ms var(--wb-jelly);
 }
 
+/*
+ * §9.33 — the bar may only appear once the fold has finished.
+ *
+ * `overflow-y: auto` used to switch on with the class, i.e. at the first frame of
+ * the spring, while the box was still a few pixels tall and the summary already
+ * 450px: every open painted a thumb that then shrank away, and the accept pass
+ * saw it as a flicker. So the base rule keeps `overflow: hidden` and the open
+ * state hands the scroll over through a zero-length animation that starts when
+ * the spring (380ms) has landed. `forwards` keeps it — the computed `overflow-y`
+ * stays `auto` after the animation ends, because `overflow` is a discrete
+ * property and this is the one reliable way to say "…and then, settle".
+ */
 .detailOpen > .detail {
   visibility: visible;
   transition: visibility 0s;
-  /* §9.27: the inner scroll of the cap is open-state-only, while the cap itself
-     is permanent. On the closing click this reverts to the base rule's
-     `overflow: hidden`, so the fold clips instead of scrolling — a collapsing
-     area with `overflow-y: auto` would flash its own scrollbar mid-fold. */
-  overflow-y: auto;
   overflow-x: clip;
+  animation: wb-detail-scrollable 1ms linear 400ms forwards;
   /* §9.31.9: the bar is a permanent fixture of the section, not an overlay that
-     materialises on hover. `scrollbar-gutter: stable` reserves the lane whether
-     or not the content overflows, so a summary that grows past the cap does not
-     reflow its own text at the moment the bar appears; the explicit
-     `::-webkit-scrollbar` rules then pin a thin, always-drawn thumb instead of
-     whatever the host's overlay style would do.
+     materialises on hover. The explicit `::-webkit-scrollbar` rules pin a thin,
+     always-drawn thumb instead of whatever the host's overlay style would do.
      Deliberately no `scrollbar-width` / `scrollbar-color`: Chrome prefers those
      standard properties when present and then ignores the `::-webkit-scrollbar`
      block below, which is how the track keeps its rounded thumb. Nothing here
      runs outside Chromium, so the webkit path is the only path. */
-  scrollbar-gutter: stable;
+}
+
+@keyframes wb-detail-scrollable {
+  to {
+    overflow-y: auto;
+  }
 }
 
 .detailOpen > .detail::-webkit-scrollbar {
@@ -1542,6 +1557,14 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   /* The press squash is motion, not a state: off, not shorter. */
   .chevron:active svg {
     scale: none;
+  }
+
+  /* §9.33: the fold is instant here (`.detailWrap` above drops its transition),
+     so the delayed hand-off to a scrolling area would only postpone the bar by
+     400ms for nothing. Hand it over now. */
+  .detailOpen > .detail {
+    animation: none;
+    overflow-y: auto;
   }
 }
 

@@ -73,11 +73,15 @@ describe('edit fields replace their display element box for box', () => {
     assert.equal(padX(field), '4px')
   })
 
-  it('keeps a finished item\'s title field in the finished item\'s ink', () => {
-    const text = rule('.cardDone .titleText')
-    const field = rule('.cardDone .fieldTitle')
-    assert.equal(field['color'], text['color'])
-    assert.equal(field['font-weight'], text['font-weight'])
+  it('leaves a finished item\'s title at full strength (§9.30)', () => {
+    // The reference's finished card is its most legible one, so the old dimming pair
+    // (`.cardDone .titleText` + `.cardDone .fieldTitle`) is gone: completion is said
+    // by the green pill and the status dot, not by washing the text out. If either
+    // rule comes back the two inks drift apart again — which is the bug this file
+    // exists to catch — so their absence is asserted instead.
+    assert.ok(!css.includes('.cardDone .titleText'), 'a finished title must not restate its ink')
+    assert.ok(!css.includes('.cardDone .fieldTitle'), 'nor may its field')
+    assert.ok(!/\.cardDone\s*\{[^}]*opacity/.test(css), 'a finished card must not be dimmed')
   })
 
   it('keeps the description field on the description lines, capped at the clamp', () => {

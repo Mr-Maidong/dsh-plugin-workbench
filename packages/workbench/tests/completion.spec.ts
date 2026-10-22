@@ -236,13 +236,15 @@ describe('write-back wiring', () => {
 
   it('draws the hint, and holds the pending pulse still under reduced motion', () => {
     assert.ok(css.includes('.detailHint {'))
-    assert.ok(css.includes('.writeBackPending {'))
+    // §9.30 — the write-back control is a labelled button now, so its waiting
+    // state is `.ghostBtnPending`.
+    assert.ok(css.includes('.ghostBtnPending {'))
     assert.ok(css.includes('@keyframes wb-writeback-wait'))
     assert.ok(css.includes('animation: wb-writeback-wait'))
     // The pulse is the only motion this state adds. The *last* word on the class wins,
     // so that declaration is the one that has to be the reduced-motion branch: a
     // branch written earlier would be overridden by the base rule below it.
-    const lastWord = css.lastIndexOf('.writeBackPending {')
+    const lastWord = css.lastIndexOf('.ghostBtnPending {')
     assert.ok(
       css.slice(lastWord, lastWord + 120).includes('animation: none'),
       'the pending state needs a reduced-motion branch that switches the pulse off',

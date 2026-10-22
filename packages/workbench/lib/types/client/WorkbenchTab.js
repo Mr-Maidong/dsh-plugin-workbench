@@ -317,7 +317,7 @@ export function WorkbenchTab(props) {
                                 ].filter(Boolean).join(' '), onClick: () => {
                                     setEditing({ kind: 'none' });
                                     store.setFilter(tier);
-                                }, children: [t(`filter.${tier}`), _jsx("span", { className: css.chipCount, children: snapshot.counts[tier] })] }, tier))), _jsx("span", { className: css.filterSpacer }), _jsx("button", { type: "button", className: css.iconBtn, title: t('action.create'), "aria-label": t('action.create'), onClick: () => { setEditing({ kind: 'create' }); }, children: _jsx(PlusGlyph, {}) })] })] }), _jsxs("div", { className: css.scroller, children: [notice !== undefined && _jsx("p", { className: css.notice, children: notice }), snapshot.phase === 'loading' && (_jsxs("div", { className: css.skeletonList, children: [_jsx("div", { className: css.skeleton }), _jsx("div", { className: css.skeleton })] })), snapshot.phase === 'error' && (_jsxs(_Fragment, { children: [_jsx("p", { className: `${css.status} ${css.statusError}`, children: t('state.error', { message: snapshot.error?.message ?? '' }) }), _jsx("button", { type: "button", className: css.retryBtn, onClick: () => { void store.refresh(); }, children: t('state.retry') })] })), snapshot.phase === 'ready' && (_jsxs(_Fragment, { children: [editing.kind === 'create' && (_jsx("ul", { className: css.list, children: _jsx("li", { className: `${css.card} ${css.cardComposing}`, children: _jsxs("div", { className: css.cardHead, children: [_jsx("span", { className: `${css.glyph} ${css.glyphComposing}`, children: _jsx(StatusGlyph, {}) }), _jsx("div", { className: css.cardBody, children: _jsx(Composer, { t: t, onCommit: title => { void createItem(title); }, onCancel: () => { setEditing({ kind: 'none' }); } }) })] }) }) })), snapshot.items.length === 0 && editing.kind !== 'create' && (_jsxs("div", { className: css.empty, children: [_jsx(EmptyGlyph, {}), snapshot.query !== '' || snapshot.filter !== 'all'
+                                }, children: [t(`filter.${tier}`), _jsx("span", { className: css.chipCount, children: snapshot.counts[tier] })] }, tier))), _jsx("span", { className: css.filterSpacer }), _jsx("button", { type: "button", className: css.iconBtn, title: t('action.create'), "aria-label": t('action.create'), onClick: () => { setEditing({ kind: 'create' }); }, children: _jsx(PlusGlyph, {}) })] })] }), _jsxs("div", { className: css.scroller, children: [notice !== undefined && _jsx("p", { className: css.notice, children: notice }), snapshot.phase === 'loading' && (_jsxs("div", { className: css.skeletonList, children: [_jsx("div", { className: css.skeleton }), _jsx("div", { className: css.skeleton })] })), snapshot.phase === 'error' && (_jsxs(_Fragment, { children: [_jsx("p", { className: `${css.status} ${css.statusError}`, children: t('state.error', { message: snapshot.error?.message ?? '' }) }), _jsx("button", { type: "button", className: css.retryBtn, onClick: () => { void store.refresh(); }, children: t('state.retry') })] })), snapshot.phase === 'ready' && (_jsxs(_Fragment, { children: [editing.kind === 'create' && (_jsx("ul", { className: css.list, children: _jsx("li", { className: `${css.card} ${css.cardComposing}`, children: _jsxs("div", { className: css.cardHead, children: [_jsx("span", { className: `${css.mark} ${css.markBusy}`, children: _jsx("span", { className: css.markDot }) }), _jsx("div", { className: css.cardBody, children: _jsx(Composer, { t: t, onCommit: title => { void createItem(title); }, onCancel: () => { setEditing({ kind: 'none' }); } }) })] }) }) })), snapshot.items.length === 0 && editing.kind !== 'create' && (_jsxs("div", { className: css.empty, children: [_jsx(EmptyGlyph, {}), snapshot.query !== '' || snapshot.filter !== 'all'
                                         ? (_jsxs(_Fragment, { children: [_jsx("p", { children: t('empty.filtered') }), _jsx("p", { className: css.emptyHint, children: t('empty.filteredHint') })] }))
                                         : (_jsxs(_Fragment, { children: [_jsx("p", { children: t('empty.title') }), _jsx("p", { className: css.emptyHint, children: t('empty.hint') })] }))] })), snapshot.filter === 'all' && active.length > 0 && done.length > 0 && (_jsxs("p", { className: css.groupLabel, children: [t('group.active'), " \u00B7 ", active.length] })), _jsx("ul", { className: css.list, children: (snapshot.filter === 'all' ? active : snapshot.filter === 'done' ? done : snapshot.items).map(item => (_jsx(Card, { item: item, t: t, editing: editing, open: expanded.includes(item.id), pending: writeBack === item.id, onEdit: next => { setEditing(next); setNotice(undefined); }, onCommit: (field, draft) => { void commit(item, field, draft); }, onCancel: () => { setEditing({ kind: 'none' }); }, onToggle: () => { toggleExpanded(item.id); }, onDelete: () => { void removeItem(item); }, onRequestComplete: () => { void requestWriteBack(item); }, onFill: canFill ? () => { fillComposer(item); } : undefined }, item.id))) }), snapshot.filter === 'all' && done.length > 0 && (_jsxs(_Fragment, { children: [active.length > 0 && (_jsxs("p", { className: css.groupLabel, children: [t('group.done'), " \u00B7 ", done.length] })), _jsx("ul", { className: css.list, children: done.map(item => (_jsx(Card, { item: item, t: t, editing: editing, open: expanded.includes(item.id), pending: writeBack === item.id, onEdit: next => { setEditing(next); setNotice(undefined); }, onCommit: (field, draft) => { void commit(item, field, draft); }, onCancel: () => { setEditing({ kind: 'none' }); }, onToggle: () => { toggleExpanded(item.id); }, onDelete: () => { void removeItem(item); }, onRequestComplete: () => { void requestWriteBack(item); }, onFill: canFill ? () => { fillComposer(item); } : undefined }, item.id))) })] })), snapshot.total > snapshot.items.length && (_jsx("p", { className: css.status, children: t('list.more', { count: snapshot.total - snapshot.items.length }) }))] }))] })] }));
 }
@@ -330,15 +330,23 @@ function Card({ item, t, editing, open, pending = false, onEdit, onCommit, onCan
         classes.push(css.cardDone);
     if (item.archived)
         classes.push(css.cardArchived);
-    return (_jsxs("li", { className: classes.join(' '), children: [_jsxs("div", { className: css.cardHead, children: [_jsx("span", { className: item.status === 'done' ? `${css.glyph} ${css.glyphDone}` : css.glyph, title: t('card.statusHint'), children: _jsx(StatusGlyph, { done: item.status === 'done' }) }), _jsxs("div", { className: css.cardBody, children: [_jsxs("div", { className: css.titleRow, children: [isEditing('title')
+    return (_jsxs("li", { className: classes.join(' '), children: [_jsxs("div", { className: css.cardHead, children: [_jsx("span", { className: [
+                            css.mark,
+                            item.status === 'done' ? css.markDone : '',
+                            item.status === 'in_progress' ? css.markBusy : '',
+                        ].filter(Boolean).join(' '), title: t('card.statusHint'), children: _jsx("span", { className: css.markDot }) }), _jsxs("div", { className: css.cardBody, children: [_jsxs("div", { className: css.titleRow, children: [isEditing('title')
                                         ? (_jsx(InlineField, { className: `${css.field} ${css.fieldTitle}`, value: draftOf('title'), placeholder: t('edit.titlePlaceholder'), multiline: false, onChange: draft => { onEdit({ kind: 'field', id: item.id, field: 'title', draft }); }, onCommit: draft => { onCommit('title', draft); }, onCancel: onCancel }))
-                                        : (_jsx("button", { type: "button", className: css.titleText, onClick: () => { onEdit({ kind: 'field', id: item.id, field: 'title', draft: item.title }); }, children: item.title })), onFill !== undefined && (_jsx("button", { type: "button", className: css.sendBtn, title: t('card.fillTitle'), "aria-label": t('card.fillTitle'), onClick: onFill, children: _jsx(SendGlyph, {}) })), item.status !== 'done' && (_jsx("button", { type: "button", className: pending
-                                            ? `${css.writeBack} ${css.writeBackPending}`
-                                            : item.status === 'in_progress' ? `${css.writeBack} ${css.writeBackBusy}` : css.writeBack, title: t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), "aria-label": t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), disabled: pending, onClick: onRequestComplete, children: _jsx(MagnifierGlyph, {}) }))] }), isEditing('desc')
+                                        : (_jsx("button", { type: "button", className: css.titleText, onClick: () => { onEdit({ kind: 'field', id: item.id, field: 'title', draft: item.title }); }, children: item.title })), item.status !== 'open' && (_jsxs("span", { className: item.status === 'done'
+                                            ? `${css.statusPill} ${css.statusPillDone}`
+                                            : `${css.statusPill} ${css.statusPillBusy}`, children: [item.status === 'done'
+                                                ? _jsx(CheckBadgeGlyph, {})
+                                                : _jsx("span", { className: css.statusPip }), t(item.status === 'done' ? 'card.status.done' : 'card.status.in_progress')] })), item.archived && _jsx("span", { className: css.archivedBadge, children: t('card.archived') })] }), isEditing('desc')
                                 ? (_jsx(InlineField, { className: `${css.field} ${css.fieldDesc}`, value: draftOf('desc'), placeholder: t('card.noDescription'), multiline: true, onChange: draft => { onEdit({ kind: 'field', id: item.id, field: 'desc', draft }); }, onCommit: draft => { onCommit('desc', draft); }, onCancel: onCancel }))
-                                : (_jsx("button", { type: "button", className: item.desc === '' ? `${css.descText} ${css.descEmpty}` : css.descText, onClick: () => { onEdit({ kind: 'field', id: item.id, field: 'desc', draft: item.desc }); }, children: item.desc === '' ? t('card.noDescription') : item.desc })), _jsxs("div", { className: css.metaRow, children: [isEditing('tag')
+                                : (_jsx("button", { type: "button", className: item.desc === '' ? `${css.descText} ${css.descEmpty}` : css.descText, onClick: () => { onEdit({ kind: 'field', id: item.id, field: 'desc', draft: item.desc }); }, children: item.desc === '' ? t('card.noDescription') : item.desc })), _jsxs("div", { className: css.metaRow, children: [_jsx(CalendarGlyph, {}), _jsx("span", { className: css.metaLabel, children: t('card.project') }), isEditing('tag')
                                         ? (_jsx(InlineField, { className: `${css.field} ${css.fieldTag}`, value: draftOf('tag'), placeholder: t('card.noTag'), multiline: false, onChange: draft => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft }); }, onCommit: draft => { onCommit('tag', draft); }, onCancel: onCancel }))
-                                        : (_jsx("button", { type: "button", className: item.tag === '' ? `${css.tag} ${css.tagEmpty}` : css.tag, onClick: () => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft: item.tag }); }, children: item.tag === '' ? t('card.noTag') : item.tag })), item.status !== 'open' && (_jsxs("span", { className: css.statusWord, children: [_jsx("span", { className: item.status === 'done' ? `${css.dot} ${css.dotDone}` : `${css.dot} ${css.dotInProgress}` }), item.status === 'done' ? t('card.status.done') : t('card.status.in_progress')] })), item.archived && _jsx("span", { className: css.archivedBadge, children: t('card.archived') }), _jsx("span", { className: css.metaSpacer }), _jsx("span", { className: css.time, children: relative(item.updateAt, t('card.justNow')) }), _jsx("span", { className: css.cardActions, children: _jsx("button", { type: "button", className: open ? `${css.chevron} ${css.chevronOpen}` : css.chevron, title: open ? t('card.collapse') : t('card.expand'), "aria-label": open ? t('card.collapse') : t('card.expand'), "aria-expanded": open, onClick: onToggle, children: _jsx(ChevronGlyph, {}) }) })] })] })] }), _jsx("div", { className: open ? `${css.detailWrap} ${css.detailOpen}` : css.detailWrap, children: _jsxs("div", { className: css.detail, children: [_jsx("div", { className: css.completionDivider, children: t('completion.title') }), item.completion === undefined
+                                        : (_jsx("button", { type: "button", className: item.tag === '' ? `${css.tag} ${css.tagEmpty}` : css.tag, onClick: () => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft: item.tag }); }, children: item.tag === '' ? t('card.noTag') : item.tag })), _jsx("span", { className: css.metaSpacer }), _jsx("span", { className: css.time, children: relative(item.updateAt, t('card.justNow')) })] }), _jsxs("div", { className: css.cardFoot, children: [onFill !== undefined && (_jsxs("button", { type: "button", className: css.primaryBtn, title: t('card.fillTitle'), "aria-label": t('card.fillTitle'), onClick: onFill, children: [_jsx(SendGlyph, {}), _jsx("span", { children: t('card.fill') })] })), item.status !== 'done' && (_jsxs("button", { type: "button", className: pending
+                                            ? `${css.ghostBtn} ${css.ghostBtnPending}`
+                                            : item.status === 'in_progress' ? `${css.ghostBtn} ${css.ghostBtnBusy}` : css.ghostBtn, title: t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), "aria-label": t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), disabled: pending, onClick: onRequestComplete, children: [_jsx(SummaryGlyph, {}), _jsx("span", { children: t('card.summarize') })] })), _jsx("span", { className: css.footSpacer }), _jsx("span", { className: css.cardActions, children: _jsxs("button", { type: "button", className: open ? `${css.chevron} ${css.chevronOpen}` : css.chevron, title: open ? t('card.collapse') : t('card.expand'), "aria-label": open ? t('card.collapseDetails') : t('card.expandDetails'), "aria-expanded": open, onClick: onToggle, children: [_jsx(ChevronGlyph, {}), _jsx("span", { children: open ? t('card.collapseDetails') : t('card.expandDetails') })] }) })] })] })] }), _jsx("div", { className: open ? `${css.detailWrap} ${css.detailOpen}` : css.detailWrap, children: _jsxs("div", { className: css.detail, children: [_jsx("div", { className: css.completionDivider, children: t('completion.title') }), item.completion === undefined
                             ? _jsx("p", { className: css.detailEmpty, children: t('detail.noCompletion') })
                             : _jsx(Completion, { item: item, t: t }), item.status !== 'done' && (_jsx("p", { className: css.detailHint, children: t(pending
                                 ? 'writeback.pending'
@@ -371,7 +379,7 @@ function Completion({ item, t }) {
  * field whose placeholder differed from what it replaced would trade a height
  * jump for a text jump.
  */
-const DESC_LINE_HEIGHT = 18;
+const DESC_LINE_HEIGHT = 19;
 const DESC_MAX_LINES = 2;
 function InlineField({ className, value, placeholder, multiline, onChange, onCommit, onCancel }) {
     const ref = useRef(null);
@@ -447,16 +455,43 @@ function SearchGlyph() {
 function PlusGlyph() {
     return (_jsx("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: _jsx("path", { d: "M8 3.2v9.6M3.2 8h9.6", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }));
 }
+/**
+ * The disclosure chevron.
+ *
+ * It points down, because the control it sits on says "展开详情": the direction
+ * is the promise the label makes, and a right-pointing chevron would read as
+ * "next" instead. The open state rotates the *glyph* 180° — never the button,
+ * whose rounded hover and press surface must not spin (§9.18).
+ */
 function ChevronGlyph() {
-    return (_jsx("svg", { width: "13", height: "13", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: _jsx("path", { d: "m6.5 3.5 4.5 4.5-4.5 4.5", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }) }));
+    return (_jsx("svg", { width: "13", height: "13", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: _jsx("path", { d: "m3.6 6.2 4.4 4.4 4.4-4.4", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }) }));
+}
+/**
+ * The project line's calendar, and the card's date fact.
+ *
+ * Drawn in the hand-cut 16 box the rest of these glyphs use, at the weight of
+ * `.metaLabel` beside it, so the meta line reads as one sentence rather than as
+ * an icon with a caption bolted on.
+ */
+function CalendarGlyph() {
+    return (_jsxs("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "2.3", y: "3.6", width: "11.4", height: "10", rx: "2.6", stroke: "currentColor", strokeWidth: "1.4" }), _jsx("path", { d: "M2.3 6.9h11.4M5.8 2.4v2.3M10.2 2.4v2.3", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" })] }));
+}
+/**
+ * The finished pill's badge: a filled disc with a knocked-out check.
+ *
+ * The disc is the pill's own ink, so the two are one colour; the check is
+ * knocked out in the surface colour (`--wb-on-accent`), which is what keeps it
+ * legible in either theme without a second palette.
+ */
+function CheckBadgeGlyph() {
+    return (_jsxs("svg", { width: "12", height: "12", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("circle", { cx: "8", cy: "8", r: "6.9", fill: "currentColor" }), _jsx("path", { d: "m5 8.2 2 2 4-4.2", stroke: "var(--wb-on-accent)", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round" })] }));
 }
 /*
- * The two controls at the end of a card's title row use the icon set's own
- * artwork (§9.15), used as supplied: filled paths in a 1024 box instead of the
- * hand-drawn 16 box the rest of this file uses, so their weight is a property of
- * the drawing rather than of a `stroke-width` chosen here. Nothing is redrawn or
- * rescaled — only `fill` is bound to `currentColor`, so the tab's own ink still
- * applies and the `in_progress` brand tint keeps working.
+ * The card's two action glyphs use the icon set's own artwork (§9.15), used as
+ * supplied: filled paths in a 1024 box instead of the hand-drawn 16 box the rest
+ * of this file uses, so their weight is a property of the drawing rather than of
+ * a `stroke-width` chosen here. Nothing is redrawn or rescaled — only `fill` is
+ * bound to `currentColor`, so the button's own ink still applies.
  */
 /**
  * Send: the icon set's paper plane.
@@ -472,28 +507,20 @@ function SendGlyph() {
     return (_jsx("svg", { width: "14", height: "14", viewBox: "0 0 1024 1024", fill: "currentColor", "aria-hidden": "true", children: _jsx("path", { d: "M826.709333 142.336a32 32 0 0 1 46.72 32.128l-78.293333 656.981333a32 32 0 0 1-44.672 25.472l-202.069333-89.130666-106.965334 108.074666a32 32 0 0 1-54.442666-18.133333L386.688 853.333333v-158.805333l-250.453333-131.669333a32 32 0 0 1-4.053334-54.144l4.010667-2.474667z m-28.629333 123.434667l-342.186667 429.397333a32.085333 32.085333 0 0 1-5.12 5.12l-0.085333 75.221333 67.712-68.394666a32 32 0 0 1 31.018667-8.405334l4.650666 1.664 182.613334 80.512 61.397333-515.114666z m-91.562667 12.202666L219.818667 534.485333l198.912 104.618667 287.786666-361.130667z" }) }));
 }
 /**
- * Write-back: the icon set's magnifier, whose lens carries a rising trend line —
- * the shape §9.13 chose, because a summary is a read rather than a measurement
- * and the line says which kind of looking, now in the set's own drawing.
+ * Write-back: a summary sheet with two lines of text on it.
+ *
+ * §9.13 chose a reading mark (the magnifier with a trend line) while the control
+ * was a 24px icon in the heading line, where only its silhouette could speak.
+ * Now the control carries the word 总结, so the glyph's job is to name the thing
+ * produced — a written summary — in the same line weight as the calendar and the
+ * chevron it stands beside.
  */
-function MagnifierGlyph() {
-    return (_jsxs("svg", { width: "14", height: "14", viewBox: "0 0 1024 1024", fill: "currentColor", "aria-hidden": "true", children: [_jsx("path", { d: "M515.555556 92.444444c229.745778 0 416 186.254222 416 416S745.301333 924.444444 515.555556 924.444444 99.555556 738.190222 99.555556 508.444444 285.809778 92.444444 515.555556 92.444444z m0 71.111112C325.077333 163.555556 170.666667 317.966222 170.666667 508.444444S325.077333 853.333333 515.555556 853.333333 860.444444 698.922667 860.444444 508.444444 706.033778 163.555556 515.555556 163.555556z" }), _jsx("path", { d: "M757.077333 757.077333a35.555556 35.555556 0 0 1 48.995556-1.223111l1.28 1.223111 142.222222 142.222223a35.555556 35.555556 0 0 1-48.981333 51.512888l-1.28-1.223111-142.222222-142.222222a35.555556 35.555556 0 0 1 0-50.289778z" }), _jsx("path", { d: "M416.540444 453.262222a42.666667 42.666667 0 0 1 66.062223-15.104l1.706666 1.493334 81.265778 75.093333 86.983111-172.885333a35.555556 35.555556 0 0 1 46.364445-16.440889l1.379555 0.654222a35.555556 35.555556 0 0 1 16.440889 46.364444l-0.654222 1.379556-103.950222 206.606222a42.666667 42.666667 0 0 1-65.863111 13.226667l-1.194667-1.052445-80.170667-74.055111-72.675555 159.203556a35.555556 35.555556 0 0 1-45.696 18.204444l-1.422223-0.625778a35.555556 35.555556 0 0 1-18.176-45.681777l0.611556-1.422223 88.988444-194.944z" })] }));
+function SummaryGlyph() {
+    return (_jsxs("svg", { width: "13", height: "13", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "3.1", y: "2.2", width: "9.8", height: "11.6", rx: "2.3", stroke: "currentColor", strokeWidth: "1.4" }), _jsx("path", { d: "M5.8 6.1h4.4M5.8 9.7h2.9", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" })] }));
 }
 /** Delete: a lidded bin, drawn at the fill glyph's weight so the pair matches. */
 function TrashGlyph() {
     return (_jsxs("svg", { width: "13", height: "13", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("path", { d: "M2.8 4.4h10.4", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" }), _jsx("path", { d: "M6.4 4.4V3.1a.7.7 0 0 1 .7-.7h1.8a.7.7 0 0 1 .7.7v1.3", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round", strokeLinejoin: "round" }), _jsx("path", { d: "M4.3 4.4l.5 7.8a1.5 1.5 0 0 0 1.5 1.4h3.4a1.5 1.5 0 0 0 1.5-1.4l.5-7.8", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round", strokeLinejoin: "round" }), _jsx("path", { d: "M6.7 6.9v3.9M9.3 6.9v3.9", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })] }));
-}
-/**
- * The status ring that opens every card.
- *
- * A plain 15px circle, with a check once the item is done — the prototype's
- * `.glyph`, and deliberately binary: "in progress" is not a third ring, it is
- * said in words in the card's foot. Colour comes from the slot (`.glyph`), so
- * the same drawing serves open, composing and finished.
- * @param props - `done` draws the check.
- */
-function StatusGlyph({ done = false }) {
-    return (_jsxs("svg", { width: "15", height: "15", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("circle", { cx: "8", cy: "8", r: "6.3", stroke: "currentColor", strokeWidth: "1.3" }), done && (_jsx("path", { d: "M5.3 8.2l1.9 1.9 3.5-3.7", stroke: "currentColor", strokeWidth: "1.45", strokeLinecap: "round", strokeLinejoin: "round" }))] }));
 }
 /** The empty state's mark: a sheet with a line of text, above the sentence. */
 function EmptyGlyph() {

@@ -34,6 +34,9 @@
  */
 
 .pane {
+  /* Named so the footer's narrow-width query (§9.30) asks the column the user
+     drags, rather than the unnamed scroll container inside it. */
+  container: wb-pane / inline-size;
   /* Muted text, tier 3 — the prototype's `label-tertiary`. */
   --wb-tertiary: color-mix(in srgb, var(--dsw-alias-label-secondary) 72%, var(--dsw-alias-bg-base));
   /* Quietest text — the prototype's `label-caption`. */
@@ -48,11 +51,42 @@
   --wb-accent-wash: color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);
 
   /*
-   * Elevation only: the card now draws its own 0.5px border, so a ring inside the
-   * shadow would double it. Magnitudes are the prototype's light-mode pair.
+   * The card's accent (§9.30).
+   *
+   * The reference design gives the card one green and spends it three times: the
+   * status dot, the finished pill, and the primary action. It is the theme's
+   * success colour, not a hard-coded sage, so both themes stay consistent and a
+   * profile that recolours success recolours the cards with it. Putting the card
+   * on the brand accent instead is this one line.
    */
-  --wb-card-shadow: 0 1px 2px rgb(0 0 0 / 5%);
-  --wb-card-shadow-hover: 0 3px 10px rgb(0 0 0 / 8%);
+  --wb-accent: var(--dsw-alias-state-success-primary);
+  /* The accent as a surface: the dot's halo, the pill's fill. */
+  --wb-accent-soft: color-mix(in srgb, var(--wb-accent) 15%, transparent);
+  /* The filled button's green. The reference's own #2e9e6e sits a step lighter
+     than the theme's success green, so the fill is the accent lifted 8% toward the
+     base surface — the same lightness the mock's button has, at the same
+     contrast against its white label (about 3.4:1, which is what the reference
+     itself draws). In dark mode the mix is negligible against the brighter
+     success token, and the label is `bg-base` — near-black — so it stays legible
+     there. Mixing further toward `label-primary` instead is the one-line way to a
+     4.5:1 button if that is ever preferred over the mock. */
+  --wb-accent-fill: color-mix(in srgb, var(--wb-accent) 92%, var(--dsw-alias-bg-base));
+  /* Ink that sits on the accent: the base surface, white in light and near-black
+     in dark — the colour that actually contrasts with the accent in each theme. */
+  --wb-on-accent: var(--dsw-alias-bg-base);
+  /* The card's body ink — the description and the project line. The reference sets
+     both a step darker than this pane's caption tiers, at about 6:1 on the card
+     surface: read as prose, and still clearly quieter than the title. */
+  --wb-body: color-mix(in srgb, var(--dsw-alias-label-secondary) 92%, var(--dsw-alias-bg-base));
+
+  /*
+   * Elevation only: the card now draws its own 0.5px border, so a ring inside the
+   * shadow would double it. Two layers, as the reference card has them: a tight
+   * contact shadow and a wide, very faint one that lets the card sit on the
+   * scroller rather than on it.
+   */
+  --wb-card-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 20px -14px rgb(0 0 0 / 22%);
+  --wb-card-shadow-hover: 0 2px 4px rgb(0 0 0 / 5%), 0 12px 26px -14px rgb(0 0 0 / 26%);
 
   display: flex;
   flex-direction: column;
@@ -281,11 +315,43 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   list-style: none;
 }
 
+/*
+ * The card (§9.30).
+ *
+ * The reference design's card is a soft, generously padded surface with a
+ * tinted white body, one green accent shared by the status mark, the finished
+ * pill and the primary action, and a real button row across the bottom. Three
+ * things follow from it and are worth stating, because each one is a departure:
+ *
+ * 1. The card is no longer dimmed when it is finished. A finished item used to be
+ *    a record set back from the working set at 72% opacity; in the reference the
+ *    finished card is the *most* legible one on screen, and the green pill says
+ *    what it is without washing out the text. The hierarchy is now carried by the
+ *    pill and by the title's own ink.
+ * 2. The surface is tinted (4-8% of the accent over `bg-base`) instead of flat.
+ *    It is what makes the card read as the reference's sage panel rather than as
+ *    another grey rectangle. `bg-base` rather than `bg-layer-1` because the card
+ *    sits *above* the sidebar's fill in the reference — lighter than its page in
+ *    light mode, and a touch raised above it in dark mode too.
+ * 3. The actions are labelled buttons, not 24px icon squares: that is the whole
+ *    point of the reference's footer, and it is why the card grew a row.
+ * 4. Every glyph in the card is one weight, 500. Emphasis is carried by ink and
+ *    by the pill's wash, never by weight: a 600 title next to a 400 description
+ *    made the card read as two documents stacked, and the reference itself is
+ *    set flat. The declaration lives here so the whole subtree inherits it, and
+ *    the rules below may only restate it, never step away from it.
+ */
 .card {
-  padding: 10px 12px;
+  padding: 12px 13px 13px;
+  font-weight: 500;
   border: 0.5px solid var(--dsw-alias-border-l1);
-  border-radius: 18px;
-  background: var(--dsw-alias-bg-layer-1);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      158deg,
+      color-mix(in srgb, var(--wb-accent) 4%, var(--dsw-alias-bg-base)),
+      color-mix(in srgb, var(--wb-accent) 8%, var(--dsw-alias-bg-base))
+    );
   box-shadow: var(--wb-card-shadow);
   transition: box-shadow 160ms ease, border-color 160ms ease;
 }
@@ -294,19 +360,21 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   box-shadow: var(--wb-card-shadow-hover);
 }
 
-/* Composing is signalled by the accent border alone; the prototype adds neither
+/* Composing is signalled by the accent border alone; the reference adds neither
    a ring nor a glow. */
 .cardComposing {
-  border-color: color-mix(in srgb, var(--wb-business) 42%, transparent);
+  border-color: color-mix(in srgb, var(--wb-accent) 46%, transparent);
 }
 
-/* A finished item is an execution record: dimmed, but still fully editable. */
+/* Finished: the card keeps its full strength (see the note on `.card`). The pill
+   and the green dot are what mark it — the reference's finished card is its most
+   legible one, not its quietest — so only the elevation settles a little. */
 .cardDone {
-  opacity: 0.72;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
 }
 
 .cardDone:hover {
-  opacity: 1;
+  box-shadow: var(--wb-card-shadow-hover);
 }
 
 /*
@@ -324,8 +392,8 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   border-style: dashed;
 }
 
-/* Prototype `.card[data-archived] .glyph`: the status mark recedes too. */
-.cardArchived .glyph {
+/* The status mark recedes too, the way the prototype's glyph does. */
+.cardArchived .mark {
   opacity: 0.55;
 }
 
@@ -336,51 +404,44 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 .cardHead {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  /* The mark's 20px plus this 9px gap is the body column's indent, which is what
+     `.detail` pads to. */
+  gap: 9px;
 }
 
 /*
- * The status mark in the card's left margin — the prototype's `.glyph`.
+ * The status mark: a dot in a soft halo, the composition the reference draws.
  *
- * A 17px slot holding a 15px ring, laid out the prototype's way (no height, a 2px
- * drop): the slot's width plus `.cardHead`'s 11px gap is what the expanded area's
- * indent is measured against, so the detail block lines up with the body column
- * rather than with the card edge.
+ * A 20px slot — the halo — holding an 8px dot. Open items carry the dot alone, in
+ * the idle ink, because "nothing has happened yet" should not glow; a finished
+ * item and the composer fill the slot with 15% of the accent and take the accent
+ * for the dot itself. Status used to be a 15px ring; the halo reads at the same
+ * glance and gives the card its one piece of deliberate softness.
  */
-.glyph {
+.mark {
   flex: none;
-  display: flex;
-  justify-content: center;
-  width: 15px;
-  margin-top: 3px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: transparent;
   color: var(--dsw-alias-state-idle-primary);
+  transition: background 160ms ease, color 160ms ease;
 }
 
-.glyphDone {
-  color: var(--dsw-alias-state-success-primary);
-}
-
-/* The composing card's ring takes the accent, so "being written" is
-   distinguishable from "open" before the item exists. */
-.glyphComposing {
-  color: var(--wb-business);
-}
-
-/* The status word's own mark: 6px, and drawn only for a status that has
-   something to say. A different thing from `.glyph` above, which is the ring. */
-.dot {
-  flex: none;
-  width: 6px;
-  height: 6px;
+.markDot {
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
+  background: currentColor;
 }
 
-.dotInProgress {
-  background: var(--wb-business);
-}
-
-.dotDone {
-  background: var(--dsw-alias-state-success-primary);
+.markDone,
+.markBusy {
+  background: var(--wb-accent-soft);
+  color: var(--wb-accent);
 }
 
 .cardBody {
@@ -391,35 +452,45 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 }
 
 /*
- * Prototype `.head` minus its timestamp: the title, and the send control the
- * prototype never had, on one baseline. The timestamp moved to the foot at the
- * user's request (§9.11 第 5 条), which is a deliberate departure from the prototype
- * — the prototype cannot arbitrate this one, because it has no send control to
- * place and therefore no view about which edge each belongs on.
+ * The heading line: the title, and the status pill on its trailing edge.
+ *
+ * The send and write-back controls used to live here (§9.11 第 5 条, §9.13); the
+ * reference design puts every action in one footer row, so the title owns the
+ * whole width of the line it is read on and the pill closes it (§9.30).
  */
 .titleRow {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
+/*
+ * The title: 14px at the card's flat 500, on a 20px line.
+ *
+ * It was 13px/550, then 14px/600. The size is what makes the card read as a
+ * titled object rather than as a dense list row; the weight is now the card's
+ * one weight, and the title earns its rank from `label-primary` ink against the
+ * description's `--wb-body` (§9.30.3), not from a heavier face. The 4px
+ * horizontal inset is the edit field's own (§9.16) and survives: the line box is
+ * still exactly 20px.
+ */
 .titleText {
   flex: 1;
   min-width: 0;
   margin: 0;
   /* 4px of air on each side, and `.fieldTitle` carries the same 4px — horizontal
-     only, so the 21px line box is untouched (§9.16). */
+     only, so the 20px line box is untouched (§9.16). */
   padding: 0 4px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--dsw-alias-label-primary);
   font: inherit;
-  font-size: 13px;
-  font-weight: 550;
+  font-size: 14px;
+  font-weight: 500;
   line-height: 20px;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
   text-align: left;
   cursor: text;
   /* One line, truncated, as in the prototype: a card's height stays predictable,
@@ -435,10 +506,9 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   background: var(--wb-hover);
 }
 
-.cardDone .titleText {
-  color: var(--wb-tertiary);
-  font-weight: 450;
-}
+/* A finished item's title is no longer dimmed (§9.30): the pill and the green dot
+   say it, and the reference keeps its finished card fully legible. There is
+   therefore no second ink for `.cardDone .fieldTitle` to restate. */
 
 .descText {
   /* Two lines, as in the prototype: a description is a note beside the title and
@@ -449,17 +519,24 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-  margin: 4px 0 0;
+  /* 5px above: the reference holds the description a little further off the title
+     than a list row would, and `line-clamp` needs the margin on the display box
+     where `.fieldDesc` can copy it (§9.14). */
+  margin: 5px 0 0;
   /* Same 4px as `.fieldDesc` (§9.16); horizontal only, so the clamp and the
      measured height are unaffected. */
   padding: 0 4px;
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--wb-tertiary);
+  color: var(--wb-body);
   font: inherit;
-  font-size: 11.5px;
-  line-height: 18px;
+  /* 12px/19px: one step up from the old 11.5/18. The description is the card's
+     longest read, and the reference sets it at the size a note is read at rather
+     than at the size a caption is scanned at. `DESC_LINE_HEIGHT` in the .tsx is
+     this number (§9.14). */
+  font-size: 12px;
+  line-height: 19px;
   text-align: left;
   white-space: pre-wrap;
   cursor: text;
@@ -475,82 +552,155 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   font-style: italic;
 }
 
+/*
+ * The meta line: the project, read as a labelled fact.
+ *
+ * The tag used to be a filled pill on this row. The reference writes the project
+ * as "项目： 产品官网改版" — a label and a value on one line, in the same ink — and
+ * that is the better reading: it is a fact about the item, not a category the
+ * user is filtering by (the filter chips above the list are where categories
+ * live). The tag keeps its edit affordance: it is still a button, and it still
+ * hovers to a wash.
+ */
 .metaRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 9px;
+  gap: 5px;
+  margin-top: 12px;
   min-width: 0;
+  /* The same ink as the description: the reference sets the project line at body
+     weight, not at caption weight — it is a fact to read, not a footnote. */
+  color: var(--wb-body);
+  font-size: 11.5px;
+  line-height: 17px;
 }
 
-/* Prototype `.spacer`: pushes the card's controls to the trailing edge, so the
-   hover-revealed delete cannot drag the disclosure button around with it. */
+.metaRow > svg {
+  flex: none;
+  color: var(--wb-caption);
+}
+
+.metaLabel {
+  flex: none;
+  /* Same ink as the value it introduces: the reference writes "项目： 产品官网改版"
+     as one phrase, and a caption-coloured label would split it in two. */
+  color: inherit;
+}
+
+/* Prototype `.spacer`: pushes the timestamp to the trailing edge. */
 .metaSpacer {
   flex: 1;
   min-width: 0;
 }
 
+/*
+ * The tag, in the meta line's own ink.
+ *
+ * Its metrics are `.fieldTag`'s (§9.14): 2px/4px of padding, a transparent 0.5px
+ * border and a 17px line box, so clicking the value does not move the row by a
+ * pixel. No wash in the display state — the tag is a value here, not a chip.
+ */
 .tag {
   display: inline-flex;
   align-items: center;
   flex: none;
-  max-width: 130px;
-  /* 26px → 24px: two pixels off the chip's height at the user's request (§9.11
-     第 7 条). That makes the chevron's 24px box the tallest thing in the foot, so
-     the row tightens by the same two pixels. */
-  padding: 4px 10px;
+  max-width: 150px;
+  padding: 2px 4px;
   border: 0.5px solid transparent;
-  border-radius: 999px;
-  background: var(--wb-accent-wash);
-  color: var(--dsw-alias-brand-primary);
-  /* A touch of transparency, also at the user's request: the tag is a label rather
-     than an action, and it should sit back the way its own wash does. The value is
-     on the whole control, so the empty state's dashed outline fades with it. */
-  opacity: 0.8;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wb-body);
   font: inherit;
-  font-size: 10.5px;
-  /* Not type: this line box is layout — it sets the pill's height, which matches
-     the footer's 24px chevron box (§9.11 item 7). So the one-step font drop of
-     §9.17 leaves it alone. */
-  line-height: 15px;
+  font-size: 11.5px;
+  line-height: 17px;
   cursor: text;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.tag:hover {
+  background: var(--wb-hover);
+  color: var(--dsw-alias-label-secondary);
 }
 
 .tagEmpty {
-  background: transparent;
-  border: 0.5px dashed var(--dsw-alias-border-l2);
   color: var(--wb-caption);
 }
 
-.statusWord {
+/*
+ * The status pill, in the heading line's trailing corner.
+ *
+ * Two states, two colours: finished is the card's accent — the same green as the
+ * status dot and the primary action — and in progress keeps the theme's brand
+ * accent, because "the model is still working on it" is a live state rather than
+ * an outcome. It is what replaced the 6px dot and the status word in the old
+ * foot: same fact, said once, where the eye already is.
+ */
+.statusPill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: var(--wb-tertiary);
+  gap: 4px;
+  flex: none;
+  height: 21px;
+  padding: 0 8px 0 6px;
+  border: 0.5px solid transparent;
+  border-radius: 999px;
   font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
   white-space: nowrap;
+}
+
+.statusPillDone {
+  border-color: color-mix(in srgb, var(--wb-accent) 46%, transparent);
+  background: var(--wb-accent-soft);
+  color: color-mix(in srgb, var(--wb-accent) 86%, var(--dsw-alias-label-primary));
+}
+
+.statusPillBusy {
+  border-color: color-mix(in srgb, var(--wb-business) 30%, transparent);
+  background: color-mix(in srgb, var(--wb-business) 10%, transparent);
+  color: var(--wb-business);
+}
+
+/* The in-progress pill's mark: a pip, since a check would say the wrong thing. */
+.statusPip {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: wb-status-breathe 1800ms ease-in-out infinite;
+}
+
+@keyframes wb-status-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .archivedBadge {
   display: inline-flex;
   align-items: center;
   flex: none;
-  padding: 2px 8px;
+  height: 19px;
+  padding: 0 7px;
   border-radius: 999px;
-  background: var(--dsw-alias-bg-layer-2);
-  color: var(--wb-tertiary);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);
+  color: var(--wb-caption);
   font-size: 10px;
-  line-height: 14px;
+  line-height: 1;
   white-space: nowrap;
 }
 
-/*
- * The timestamp, in the foot: the heading line's trailing edge belongs to the send
- * control now (§9.11 第 5 条). `flex: none` keeps a long tag from squeezing it.
- */
+/* The timestamp, closing the meta line. `flex: none` keeps a long tag from
+   squeezing it. */
 .time {
   flex: none;
   color: var(--wb-caption);
@@ -558,72 +708,209 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   font-variant-numeric: tabular-nums;
 }
 
+/* ------------------------------------------------------------- action row */
+
 /*
- * The send control, on the heading line's trailing edge.
+ * The action row (§9.30).
  *
- * It is the foot's icon button — 24px, caption ink, 13px glyph — wearing a circular
- * wash instead of the square one, with the same overhang the chevron carries: -4px
- * puts it in the column the foot's trailing control sits in, and the vertical -3px
- * pair keeps a 24px box from stretching a 21px line.
- *
- * No filled surface. It had the prototype's `.btnPrimary` disc for one round; the
- * user asked for it back to plain (§9.11 第 5 条), which is the better reading of
- * the action anyway — filling the composer is not sending, so the control stays as
- * quiet as its neighbours.
+ * Two verbs fill the leading edge — into the composer, and back through the
+ * model — and the disclosure closes the trailing one. The reference design's own
+ * footer has four; archive is not one of ours, because archiving is not a user
+ * action in this plugin (an item is archived when its workspace is deleted,
+ * §4.7), and inventing a control for it would offer something the Host cannot
+ * do.
  */
-.sendBtn {
+.cardFoot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.footSpacer {
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+ * The primary action: filled, the card's accent, white on green.
+ *
+ * The fill is `--wb-accent-fill`: the accent lifted 8% toward the base surface in
+ * light mode, which lands on the reference's own #2e9e6e lightness and keeps its
+ * contrast level (about 3.4:1 for the white label — see the note on the token).
+ * In dark mode the same mix leaves the bright success green alone and
+ * `--wb-on-accent` flips to near-black, so one declaration serves both themes.
+ */
+.primaryBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: center;
+  gap: 5px;
   flex: none;
-  width: 24px;
-  height: 24px;
-  margin: -3px 0;
-  padding: 0;
+  height: 26px;
+  padding: 0 8px;
   border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--wb-caption);
+  border-radius: 10px;
+  background: var(--wb-accent-fill);
+  color: var(--wb-on-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 130ms ease, color 130ms ease;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--wb-accent) 28%, transparent);
+  transition: filter 130ms ease, box-shadow 160ms ease;
 }
 
-.sendBtn:hover {
-  background: var(--wb-hover);
-  color: var(--dsw-alias-label-secondary);
+.primaryBtn:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--wb-accent) 34%, transparent);
 }
 
-.sendBtn:focus-visible {
+.primaryBtn:active {
+  filter: brightness(0.95);
+}
+
+.primaryBtn:focus-visible {
+  outline: 2px solid var(--wb-accent);
+  outline-offset: 1px;
+}
+
+/*
+ * The secondary action: an outlined button on the card's own surface.
+ *
+ * It wears the same box as the primary one — 28px, 9px radius — so the row has a
+ * single rhythm, and only the fill and the ink differ. The write-back's two live
+ * states ride on the ink, as they did when this control was a 24px icon: the
+ * brand tint for a retry, and the same breathing pulse for "sent, waiting".
+ */
+.ghostBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: none;
+  height: 26px;
+  padding: 0 8px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 130ms ease, border-color 130ms ease, color 130ms ease;
+}
+
+.ghostBtn:hover {
+  background: var(--dsw-alias-bg-base);
+  border-color: var(--wb-border-strong);
+}
+
+.ghostBtn:focus-visible {
   outline: 2px solid var(--dsw-alias-brand-primary);
   outline-offset: 1px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sendBtn {
-    transition: none;
+.ghostBtnBusy {
+  border-color: color-mix(in srgb, var(--wb-business) 38%, transparent);
+  color: var(--wb-business);
+}
+
+.ghostBtnBusy:hover {
+  color: var(--wb-business);
+}
+
+.ghostBtnPending {
+  color: var(--wb-business);
+  cursor: default;
+  animation: wb-writeback-wait 1600ms ease-in-out infinite;
+}
+
+.ghostBtnPending:hover {
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);
+  border-color: var(--dsw-alias-border-l2);
+  color: var(--wb-business);
+}
+
+@keyframes wb-writeback-wait {
+  0%,
+  100% {
+    opacity: 1;
   }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/*
+ * The disclosure: a labelled ghost button, holding the card's trailing edge.
+ *
+ * It used to be a 24px chevron square (§9.11 第 7 条). The reference design labels
+ * it 展开详情, and the label is worth the width: a bare chevron in the corner of a
+ * card is the one control new users have to guess at. The chevron now points down
+ * when closed and the *glyph* — never the button — turns 180° when it opens.
+ */
+.cardActions {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  /* Half the chevron's trailing padding (6px), so the label's last glyph sits on
+     the card's optical edge rather than 6px inside it. */
+  margin-right: -3px;
 }
 
 .chevron {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  margin: -3px -4px -3px 0;
+  gap: 4px;
+  /* The one control in the row that may give up width: at the pane's narrowest,
+     the two action buttons keep their labels and the disclosure shortens its own
+     (and, below `@container`, drops the word and keeps the glyph). */
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 6px 0 4px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
-  color: var(--wb-caption);
+  color: var(--wb-tertiary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: background 130ms ease, color 130ms ease;
 }
 
-.chevron:hover {
-  background: var(--wb-hover);
-  color: var(--dsw-alias-label-secondary);
+.chevron > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Narrow panes drop the disclosure's words.
+ *
+ * The query is named, and `.pane` carries that name — `.scroller` below is an
+ * unnamed size container, and an anonymous query would resolve against *it*,
+ * where a scroll container is not a usable query container in every engine.
+ * Naming the pane skips it and asks the column the user drags. The footer has
+ * pane - 92 to work with (28 scroller padding, 15 scrollbar gutter, 26 card
+ * padding, 31 for the dot column, less the 3px the last button overhangs), and
+ * the three labelled controls want 207 of it; below 306 the words go and the
+ * chevron stays, with the full label still in `aria-label` and `title`. Wrapping
+ * the disclosure onto its own row instead reads as a stray line.
+ */
+@container wb-pane (max-width: 306px) {
+  .chevron > span {
+    display: none;
+  }
+
+  .chevron {
+    padding: 0 4px;
+  }
 }
 
 .chevron:focus-visible {
@@ -633,7 +920,7 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 
 /* Rotating the glyph rather than the button — see the note on `.chevron svg`. */
 .chevronOpen svg {
-  rotate: 90deg;
+  rotate: 180deg;
 }
 
 /*
@@ -648,53 +935,6 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 
 .chevron:active svg {
   scale: 0.82;
-}
-
-/*
- * The card foot's trailing control: the disclosure.
- *
- * The send control sat here too until §9.11 第 5 条 moved it to the heading line and
- * brought the timestamp down to this end. What is left is the ported chevron's own
- * 24px box — 8px radius, caption ink, 13px glyph — held against the card's trailing
- * edge by `.metaSpacer`, so it stays put whatever the row contains.
- *
- * Delete is deliberately not here either: it lives at the end of the expanded area
- * (`.detailBar`), where the prototype puts it. A destructive control has no business
- * on a row the user is scanning, and opening the card first is a gesture worth
- * spending.
- */
-.cardActions {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  gap: 2px;
-}
-
-.cardActions > button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--wb-caption);
-  cursor: pointer;
-  transition: opacity 130ms ease, background 130ms ease, color 130ms ease;
-}
-
-.cardActions > button:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
-  outline-offset: 1px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cardActions > button {
-    transition: none;
-  }
 }
 
 /* ----------------------------------------------------------- edit fields */
@@ -727,29 +967,24 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   caret-color: var(--wb-business);
 }
 
-/* `.titleText` is 14px/550 in a 21px line box, and this declares no height on
-   purpose: an input with a matching line-height is 21px tall by itself, which is
+/* `.titleText` is 14px/500 in a 20px line box, and this declares no height on
+   purpose: an input with a matching line-height is 20px tall by itself, which is
    what makes the two boxes the same one. */
 .fieldTitle {
   /* The display element's own 4px (§9.16): without it the text would jump 4px
      sideways the moment the title is clicked. */
   padding: 0 4px;
-  font-size: 13px;
-  font-weight: 550;
+  font-size: 14px;
+  font-weight: 500;
   line-height: 20px;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
   color: var(--dsw-alias-label-primary);
 }
 
-/* A finished item's title is tertiary and lighter while displayed (`.cardDone
-   .titleText`), so its field is too — otherwise the text would change colour and
-   weight the moment the card is clicked. */
-.cardDone .fieldTitle {
-  color: var(--wb-tertiary);
-  font-weight: 450;
-}
+/* A finished item's title is not dimmed (§9.30), so its field needs no override
+   either — it is the same ink and weight as the open card's. */
 
-/* `.descText` is 12.5px/19px in at most two lines, with 4px above it. The height
+/* `.descText` is 12px/19px in at most two lines, with 3px above it. The height
    here is one line and the cap is the display's own clamp; `InlineField` measures
    the field against that cap, so a third line becomes a scrollbar rather than a
    taller card. */
@@ -758,36 +993,41 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   /* The display element's own 4px (§9.16). Horizontal only, so the height the
      layout effect measures is unchanged. */
   padding: 0 4px;
-  height: 18px;
-  max-height: 36px;
+  height: 19px;
+  max-height: 38px;
   /* The one card height that changes without a fold (§9.18): a description
      growing into its second line springs instead of jumping. */
   transition: height 240ms var(--wb-jelly);
-  margin-top: 4px;
+  margin-top: 5px;
   overflow-y: auto;
   resize: none;
-  font-size: 11.5px;
-  line-height: 18px;
+  font-size: 12px;
+  line-height: 19px;
   color: var(--wb-tertiary);
 }
 
-/* `.tag`'s metrics, copied: 4px/10px of padding, a 15px line box and the 0.5px
-   transparent border add up to the pill's 25px in both states. */
+/* `.tag`'s metrics, copied: 2px/4px of padding, a 17px line box and the 0.5px
+   transparent border add up to the same 22px in both states. The wash is the
+   display state's own hover wash, so the value "wakes up" instead of turning into
+   a differently-coloured control. */
 .fieldTag {
   flex: none;
-  width: 108px;
-  padding: 4px 10px;
+  width: 120px;
+  padding: 2px 4px;
   border: 0.5px solid transparent;
-  border-radius: 999px;
-  font-size: 10.5px;
-  line-height: 15px;
-  color: var(--dsw-alias-brand-primary);
-  background: color-mix(in srgb, var(--wb-business) 22%, transparent);
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 17px;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--wb-hover);
 }
 
 .field::placeholder {
+  /* Part of the card's flat 500, like everything else typed into it: the caption
+     ink is what marks it as a placeholder, and a lighter face on top of that
+     would read as a third weight the design does not have. */
   color: var(--wb-caption);
-  font-weight: 400;
+  font-weight: 500;
   font-style: normal;
 }
 
@@ -865,8 +1105,10 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   overflow-x: clip;
 }
 
+/* Indented to the body column: 13px of card padding + the 20px mark + the 9px
+   gap = 42px from the card's edge, i.e. 29px here (§9.30). */
 .detail {
-  padding: 2px 0 2px 28px;
+  padding: 2px 0 2px 29px;
 }
 
 /*
@@ -886,108 +1128,12 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 }
 
 /*
- * The write-back request, at the trailing end of the card's heading line (§9.13).
- *
- * It was a filled 30px pill in the expanded area with the label "生成总结并写回" on
- * it. Three things changed: the label became a tooltip (`writeback.request` /
- * `writeback.retry`), the control became a 24px icon so it can stand beside the
- * send control without the heading line cutting a button-shaped hole in the title's
- * width, and it moved up so it can be pressed without opening the card. `-8px` eats
- * the row's 10px gap down to the 2px the foot's icon pair uses; `-4px` is the
- * trailing overhang the send control used to carry, since this control now holds
- * that edge; the `-3px` above and below is the send control's own trick for sitting
- * level with the title's baseline.
- */
-.writeBack {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  margin: -3px -4px -3px -8px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--wb-caption);
-  cursor: pointer;
-  transition: background 130ms ease, color 130ms ease;
-}
-
-.writeBack:hover {
-  background: var(--wb-hover);
-  color: var(--dsw-alias-label-secondary);
-}
-
-/*
- * In progress: the lens takes the brand colour, and it is the only thing in the row
- * that does. That is the whole point of it — the retry edge (§4.5) has to look
- * different from a first request at a glance, without a second label appearing and
- * without the control changing size.
- */
-.writeBackBusy {
-  color: var(--wb-business);
-}
-
-.writeBackBusy:hover {
-  color: var(--wb-business);
-}
-
-/*
- * Sent, waiting for the model (§9.19). The third state of the same control, and
- * the only one where the click has already happened: the lens keeps the retry
- * tint and breathes, so the row says "still working" without a spinner, a label,
- * or any change in size. Markup disables it as well, which is what stops a second
- * request from queueing the same prompt twice (§11.4) — so the hover light-up is
- * cancelled here rather than left to look like a live control.
- */
-.writeBackPending {
-  color: var(--wb-business);
-  cursor: default;
-  animation: wb-writeback-wait 1600ms ease-in-out infinite;
-}
-
-.writeBackPending:hover {
-  background: transparent;
-  color: var(--wb-business);
-}
-
-@keyframes wb-writeback-wait {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.45;
-  }
-}
-
-.writeBack:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
-  outline-offset: 1px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .writeBack {
-    transition: none;
-  }
-
-  /* Still visibly "not clickable yet", just held still instead of breathing. */
-  .writeBackPending {
-    opacity: 0.55;
-    animation: none;
-  }
-}
-
-/*
- * The same 24px icon button as the card foot's controls — 8px radius, caption ink,
- * 13px glyph — with the label dropped, so the pane's destructive control is not
- * the one shape that stands out. It is always visible here: opening the card is
- * already what holds it back, and the click is confirmed on top. The -4px pulls it
- * into the column the foot's chevron occupies, which carries the same overhang.
+ * The same 24px icon button as the pane's other icon controls — 8px radius,
+ * caption ink, 13px glyph — with the label dropped, so the pane's destructive
+ * control is not the one shape that stands out. It is always visible here:
+ * opening the card is already what holds it back, and the click is confirmed on
+ * top. The -4px pulls it into the column the disclosure's own right edge
+ * occupies, which carries the same overhang.
  */
 .detailDelete {
   display: inline-flex;
@@ -1215,8 +1361,8 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 }
 
 .skeleton {
-  height: 62px;
-  border-radius: 18px;
+  height: 132px;
+  border-radius: 14px;
   background: var(--dsw-alias-bg-layer-1);
   animation: wb-pulse 1.6s ease-in-out infinite;
 }
@@ -1237,6 +1383,12 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
     animation: none;
   }
 
+  /* The in-progress pip holds still rather than breathing. */
+  .statusPip,
+  .ghostBtnPending {
+    animation: none;
+  }
+
   .card,
   .chevron,
   .chevron svg,
@@ -1244,9 +1396,13 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   .detailWrap,
   .detailWrap > .detail,
   .fieldDesc,
+  .ghostBtn,
   .iconBtn,
+  .mark,
+  .primaryBtn,
   .retryBtn,
-  .searchField {
+  .searchField,
+  .tag {
     transition: none;
   }
 

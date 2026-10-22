@@ -36,6 +36,7 @@ export declare const zh: {
     readonly 'list.more': "还有 {count} 条未显示";
     readonly 'card.noDescription': "添加描述…";
     readonly 'card.noTag': "+ 标签";
+    readonly 'card.project': "项目：";
     readonly 'card.status.done': "已完成";
     readonly 'card.status.in_progress': "进行中";
     readonly 'card.statusHint': "状态由写回自动更新";
@@ -43,7 +44,11 @@ export declare const zh: {
     readonly 'card.justNow': "刚刚";
     readonly 'card.expand': "展开";
     readonly 'card.collapse': "收起";
+    readonly 'card.expandDetails': "展开详情";
+    readonly 'card.collapseDetails': "收起详情";
     readonly 'card.fillTitle': "把这条工作项填入对话框输入框";
+    readonly 'card.fill': "发送";
+    readonly 'card.summarize': "总结";
     readonly 'group.active': "未完成";
     readonly 'group.done': "已完成";
     readonly 'group.archived': "已归档";

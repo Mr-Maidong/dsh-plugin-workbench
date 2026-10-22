@@ -484,8 +484,8 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
               <ul className={css.list}>
                 <li className={`${css.card} ${css.cardComposing}`}>
                   <div className={css.cardHead}>
-                    <span className={`${css.glyph} ${css.glyphComposing}`}>
-                      <StatusGlyph />
+                    <span className={`${css.mark} ${css.markBusy}`}>
+                      <span className={css.markDot} />
                     </span>
                     <div className={css.cardBody}>
                       <Composer
@@ -633,20 +633,25 @@ function Card({
   return (
     <li className={classes.join(' ')}>
       <div className={css.cardHead}>
-        {/* The prototype's ring in a fixed 17px slot: the slot, not the glyph, is
-            what the expanded area's indent is measured against. */}
+        {/* The status mark: a dot in a soft halo, the composition the reference
+            design draws (§9.30). The slot is fixed at 22px so the description,
+            the meta row and the expanded area all line up on the body column
+            instead of on the card's own edge. */}
         <span
-          className={item.status === 'done' ? `${css.glyph} ${css.glyphDone}` : css.glyph}
+          className={[
+            css.mark,
+            item.status === 'done' ? css.markDone : '',
+            item.status === 'in_progress' ? css.markBusy : '',
+          ].filter(Boolean).join(' ')}
           title={t('card.statusHint')}
         >
-          <StatusGlyph done={item.status === 'done'} />
+          <span className={css.markDot} />
         </span>
         <div className={css.cardBody}>
-          {/* The heading line: the title, then the two controls that push this item
-              out of the list — to the composer, and to a write-back request. It is
-              where the send control has lived since §9.11 第 5 条 (the timestamp took
-              its old place in the foot), and where §9.13 put the write-back request,
-              so both are reachable without opening the card. */}
+          {/* The heading line: the title, with the status pill on the trailing
+              edge. The send and write-back controls moved down to the foot
+              (§9.30), where the reference design puts its action row, so the
+              title owns the whole width of the line it is read on. */}
           <div className={css.titleRow}>
             {isEditing('title')
               ? (
@@ -669,47 +674,23 @@ function Card({
                     {item.title}
                   </button>
                 )}
-            {onFill !== undefined && (
-              <button
-                type="button"
-                className={css.sendBtn}
-                title={t('card.fillTitle')}
-                aria-label={t('card.fillTitle')}
-                onClick={onFill}
+            {/* Status is stated once, in the pill: the dot in the margin carries
+                the same fact as a shape, and the expanded area's hint carries the
+                consequence. An open item says nothing here — the quiet mark is
+                the whole statement, as it always was. */}
+            {item.status !== 'open' && (
+              <span
+                className={item.status === 'done'
+                  ? `${css.statusPill} ${css.statusPillDone}`
+                  : `${css.statusPill} ${css.statusPillBusy}`}
               >
-                <SendGlyph />
-              </button>
+                {item.status === 'done'
+                  ? <CheckBadgeGlyph />
+                  : <span className={css.statusPip} />}
+                {t(item.status === 'done' ? 'card.status.done' : 'card.status.in_progress')}
+              </span>
             )}
-            {/* §9.13: the write-back request ends this row — the send control moved
-                left to make room for it. Drawn for every item that is not `done`:
-                completion is irreversible and leaves no edge to take (§4.5), so a
-                finished card has nothing to offer here, and `card.statusHint` on
-                the status glyph already says the status moves on its own. Which of
-                the two live states it is in is carried by the tint, so the retry
-                reads differently without the row growing a label. Living here
-                rather than in the expanded area is what makes it reachable without
-                opening the card; the heading line is also the only row that always
-                exists.
-
-                §9.19 made the click two things instead of one, so the control
-                carries a third state: sent and waiting. It is drawn the same way —
-                the tint changes, the row does not grow — and it is `disabled`,
-                because a second request while one is in flight would ask the model
-                for the same summary twice (§11.4). */}
-            {item.status !== 'done' && (
-              <button
-                type="button"
-                className={pending
-                  ? `${css.writeBack} ${css.writeBackPending}`
-                  : item.status === 'in_progress' ? `${css.writeBack} ${css.writeBackBusy}` : css.writeBack}
-                title={t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request')}
-                aria-label={t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request')}
-                disabled={pending}
-                onClick={onRequestComplete}
-              >
-                <MagnifierGlyph />
-              </button>
-            )}
+            {item.archived && <span className={css.archivedBadge}>{t('card.archived')}</span>}
           </div>
 
           {isEditing('desc')
@@ -734,9 +715,13 @@ function Card({
                 </button>
               )}
 
-          {/* The foot, as in the prototype: what is neither heading nor
-              description, with the disclosure at its far end. */}
+          {/* The meta line: the project the item belongs to, read as a labelled
+              fact rather than as a chip (§9.30). The timestamp still closes the
+              row, and it is still a fact about the item rather than part of its
+              heading. */}
           <div className={css.metaRow}>
+            <CalendarGlyph />
+            <span className={css.metaLabel}>{t('card.project')}</span>
             {isEditing('tag')
               ? (
                   <InlineField
@@ -758,35 +743,55 @@ function Card({
                     {item.tag === '' ? t('card.noTag') : item.tag}
                   </button>
                 )}
-            {/* An item that has not started says nothing here: the ring already
-                reads as "open", and a word beside it would only repeat it. */}
-            {item.status !== 'open' && (
-              <span className={css.statusWord}>
-                <span
-                  className={item.status === 'done' ? `${css.dot} ${css.dotDone}` : `${css.dot} ${css.dotInProgress}`}
-                />
-                {item.status === 'done' ? t('card.status.done') : t('card.status.in_progress')}
-              </span>
-            )}
-            {item.archived && <span className={css.archivedBadge}>{t('card.archived')}</span>}
             <span className={css.metaSpacer} />
-            {/* The timestamp closed the heading line until the send control took that
-                edge; it reads better here — beside the tag and the status word it is
-                one more fact about the item rather than part of its heading. */}
             <span className={css.time}>{relative(item.updateAt, t('card.justNow'))}</span>
-            {/* The foot's one remaining control: disclose the item. Delete is not
-                here either — it lives at the end of the expanded area, so a
-                destructive control is never one stray click away on a closed card. */}
+          </div>
+
+          {/* The action row (§9.30): the two things this item can do — go to the
+              composer, and be written back — fill the leading edge, and the
+              disclosure closes the trailing one. Same verbs as before, given the
+              reference design's button shape; both are reachable without opening
+              the card, which is what §9.13 and §9.11 asked for. */}
+          <div className={css.cardFoot}>
+            {onFill !== undefined && (
+              <button
+                type="button"
+                className={css.primaryBtn}
+                title={t('card.fillTitle')}
+                aria-label={t('card.fillTitle')}
+                onClick={onFill}
+              >
+                <SendGlyph />
+                <span>{t('card.fill')}</span>
+              </button>
+            )}
+            {item.status !== 'done' && (
+              <button
+                type="button"
+                className={pending
+                  ? `${css.ghostBtn} ${css.ghostBtnPending}`
+                  : item.status === 'in_progress' ? `${css.ghostBtn} ${css.ghostBtnBusy}` : css.ghostBtn}
+                title={t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request')}
+                aria-label={t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request')}
+                disabled={pending}
+                onClick={onRequestComplete}
+              >
+                <SummaryGlyph />
+                <span>{t('card.summarize')}</span>
+              </button>
+            )}
+            <span className={css.footSpacer} />
             <span className={css.cardActions}>
               <button
                 type="button"
                 className={open ? `${css.chevron} ${css.chevronOpen}` : css.chevron}
                 title={open ? t('card.collapse') : t('card.expand')}
-                aria-label={open ? t('card.collapse') : t('card.expand')}
+                aria-label={open ? t('card.collapseDetails') : t('card.expandDetails')}
                 aria-expanded={open}
                 onClick={onToggle}
               >
                 <ChevronGlyph />
+                <span>{open ? t('card.collapseDetails') : t('card.expandDetails')}</span>
               </button>
             </span>
           </div>
@@ -944,7 +949,7 @@ interface InlineFieldProps {
  * field whose placeholder differed from what it replaced would trade a height
  * jump for a text jump.
  */
-const DESC_LINE_HEIGHT = 18
+const DESC_LINE_HEIGHT = 19
 const DESC_MAX_LINES = 2
 
 function InlineField({ className, value, placeholder, multiline, onChange, onCommit, onCancel }: InlineFieldProps): ReactNode {
@@ -1060,21 +1065,60 @@ function PlusGlyph(): ReactNode {
   )
 }
 
+/**
+ * The disclosure chevron.
+ *
+ * It points down, because the control it sits on says "展开详情": the direction
+ * is the promise the label makes, and a right-pointing chevron would read as
+ * "next" instead. The open state rotates the *glyph* 180° — never the button,
+ * whose rounded hover and press surface must not spin (§9.18).
+ */
 function ChevronGlyph(): ReactNode {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="m6.5 3.5 4.5 4.5-4.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m3.6 6.2 4.4 4.4 4.4-4.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/**
+ * The project line's calendar, and the card's date fact.
+ *
+ * Drawn in the hand-cut 16 box the rest of these glyphs use, at the weight of
+ * `.metaLabel` beside it, so the meta line reads as one sentence rather than as
+ * an icon with a caption bolted on.
+ */
+function CalendarGlyph(): ReactNode {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="2.3" y="3.6" width="11.4" height="10" rx="2.6" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M2.3 6.9h11.4M5.8 2.4v2.3M10.2 2.4v2.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/**
+ * The finished pill's badge: a filled disc with a knocked-out check.
+ *
+ * The disc is the pill's own ink, so the two are one colour; the check is
+ * knocked out in the surface colour (`--wb-on-accent`), which is what keeps it
+ * legible in either theme without a second palette.
+ */
+function CheckBadgeGlyph(): ReactNode {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.9" fill="currentColor" />
+      <path d="m5 8.2 2 2 4-4.2" stroke="var(--wb-on-accent)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
 /*
- * The two controls at the end of a card's title row use the icon set's own
- * artwork (§9.15), used as supplied: filled paths in a 1024 box instead of the
- * hand-drawn 16 box the rest of this file uses, so their weight is a property of
- * the drawing rather than of a `stroke-width` chosen here. Nothing is redrawn or
- * rescaled — only `fill` is bound to `currentColor`, so the tab's own ink still
- * applies and the `in_progress` brand tint keeps working.
+ * The card's two action glyphs use the icon set's own artwork (§9.15), used as
+ * supplied: filled paths in a 1024 box instead of the hand-drawn 16 box the rest
+ * of this file uses, so their weight is a property of the drawing rather than of
+ * a `stroke-width` chosen here. Nothing is redrawn or rescaled — only `fill` is
+ * bound to `currentColor`, so the button's own ink still applies.
  */
 
 /**
@@ -1098,22 +1142,19 @@ function SendGlyph(): ReactNode {
 }
 
 /**
- * Write-back: the icon set's magnifier, whose lens carries a rising trend line —
- * the shape §9.13 chose, because a summary is a read rather than a measurement
- * and the line says which kind of looking, now in the set's own drawing.
+ * Write-back: a summary sheet with two lines of text on it.
+ *
+ * §9.13 chose a reading mark (the magnifier with a trend line) while the control
+ * was a 24px icon in the heading line, where only its silhouette could speak.
+ * Now the control carries the word 总结, so the glyph's job is to name the thing
+ * produced — a written summary — in the same line weight as the calendar and the
+ * chevron it stands beside.
  */
-function MagnifierGlyph(): ReactNode {
+function SummaryGlyph(): ReactNode {
   return (
-    <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true">
-      <path
-        d="M515.555556 92.444444c229.745778 0 416 186.254222 416 416S745.301333 924.444444 515.555556 924.444444 99.555556 738.190222 99.555556 508.444444 285.809778 92.444444 515.555556 92.444444z m0 71.111112C325.077333 163.555556 170.666667 317.966222 170.666667 508.444444S325.077333 853.333333 515.555556 853.333333 860.444444 698.922667 860.444444 508.444444 706.033778 163.555556 515.555556 163.555556z"
-      />
-      <path
-        d="M757.077333 757.077333a35.555556 35.555556 0 0 1 48.995556-1.223111l1.28 1.223111 142.222222 142.222223a35.555556 35.555556 0 0 1-48.981333 51.512888l-1.28-1.223111-142.222222-142.222222a35.555556 35.555556 0 0 1 0-50.289778z"
-      />
-      <path
-        d="M416.540444 453.262222a42.666667 42.666667 0 0 1 66.062223-15.104l1.706666 1.493334 81.265778 75.093333 86.983111-172.885333a35.555556 35.555556 0 0 1 46.364445-16.440889l1.379555 0.654222a35.555556 35.555556 0 0 1 16.440889 46.364444l-0.654222 1.379556-103.950222 206.606222a42.666667 42.666667 0 0 1-65.863111 13.226667l-1.194667-1.052445-80.170667-74.055111-72.675555 159.203556a35.555556 35.555556 0 0 1-45.696 18.204444l-1.422223-0.625778a35.555556 35.555556 0 0 1-18.176-45.681777l0.611556-1.422223 88.988444-194.944z"
-      />
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="3.1" y="2.2" width="9.8" height="11.6" rx="2.3" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M5.8 6.1h4.4M5.8 9.7h2.9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   )
 }
@@ -1138,32 +1179,6 @@ function TrashGlyph(): ReactNode {
         strokeLinejoin="round"
       />
       <path d="M6.7 6.9v3.9M9.3 6.9v3.9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-/**
- * The status ring that opens every card.
- *
- * A plain 15px circle, with a check once the item is done — the prototype's
- * `.glyph`, and deliberately binary: "in progress" is not a third ring, it is
- * said in words in the card's foot. Colour comes from the slot (`.glyph`), so
- * the same drawing serves open, composing and finished.
- * @param props - `done` draws the check.
- */
-function StatusGlyph({ done = false }: { readonly done?: boolean | undefined }): ReactNode {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.3" stroke="currentColor" strokeWidth="1.3" />
-      {done && (
-        <path
-          d="M5.3 8.2l1.9 1.9 3.5-3.7"
-          stroke="currentColor"
-          strokeWidth="1.45"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      )}
     </svg>
   )
 }

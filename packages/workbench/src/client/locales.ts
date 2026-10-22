@@ -47,6 +47,7 @@ export const zh = {
 
   'card.noDescription': '添加描述…',
   'card.noTag': '+ 标签',
+  'card.project': '项目：',
   'card.status.done': '已完成',
   'card.status.in_progress': '进行中',
   'card.statusHint': '状态由写回自动更新',
@@ -54,7 +55,11 @@ export const zh = {
   'card.justNow': '刚刚',
   'card.expand': '展开',
   'card.collapse': '收起',
+  'card.expandDetails': '展开详情',
+  'card.collapseDetails': '收起详情',
   'card.fillTitle': '把这条工作项填入对话框输入框',
+  'card.fill': '发送',
+  'card.summarize': '总结',
 
   'group.active': '未完成',
   'group.done': '已完成',
@@ -155,6 +160,7 @@ export const en: Record<WorkbenchLocaleKey, string> = {
 
   'card.noDescription': 'Add a description…',
   'card.noTag': '+ tag',
+  'card.project': 'Project:',
   'card.status.done': 'Done',
   'card.status.in_progress': 'In progress',
   'card.statusHint': 'Status is updated by write-back',
@@ -162,7 +168,11 @@ export const en: Record<WorkbenchLocaleKey, string> = {
   'card.justNow': 'just now',
   'card.expand': 'Expand',
   'card.collapse': 'Collapse',
+  'card.expandDetails': 'Details',
+  'card.collapseDetails': 'Hide details',
   'card.fillTitle': 'Put this work item into the composer input',
+  'card.fill': 'Send',
+  'card.summarize': 'Summarize',
 
   'group.active': 'Open',
   'group.done': 'Done',

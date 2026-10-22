@@ -117,10 +117,14 @@ describe('the card animates its height and its disclosure control', () => {
     // A transform on the button takes its rounded hover/press background with it,
     // so the square visibly spins during the sweep. The rotation therefore lives on
     // the glyph, and the button is left with colour and opacity alone.
-    assert.equal(rule('.chevronOpen svg')['rotate'], '90deg')
+    //
+    // §9.30: the chevron now points down when the card is closed — it sits beside
+    // the words 展开详情, and the direction has to agree with the label — so the
+    // open state turns it all the way over to point up.
+    assert.equal(rule('.chevronOpen svg')['rotate'], '180deg')
     assert.equal(rule('.chevron:active svg')['scale'], '0.82')
     assert.ok(!css.includes('\n.chevronOpen {'), 'the button itself must stay unrotated')
-    for (const selector of ['.chevron', '.cardActions > button']) {
+    for (const selector of ['.chevron']) {
       assert.ok(!('transform' in rule(selector)), `${selector} must not transform`)
       assert.ok(!(rule(selector)['transition'] ?? '').includes('transform'), `${selector} transition`)
     }

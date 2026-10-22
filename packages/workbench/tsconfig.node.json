@@ -1,0 +1,13 @@
+{
+  // Host face: the workbench Service. Published @deepseek-ai/* packages
+  // resolve through node_modules; this project references nothing, because a
+  // project reference to a published package's sources does not exist here.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.node.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/client"]
+}

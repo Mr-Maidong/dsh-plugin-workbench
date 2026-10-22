@@ -1,0 +1,11 @@
+# Build output: `prepare` rebuilds it on install from git, `pnpm build` locally.
+packages/workbench/lib/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.log

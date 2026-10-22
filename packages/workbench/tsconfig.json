@@ -1,0 +1,14 @@
+{
+  // Solution-only root for the build project: the two compiler faces below
+  // merge the same `@deepseek-ai/cordis` Context under different keys, so they
+  // are separate programs with their own leaf configs.
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    },
+    {
+      "path": "./tsconfig.web.json"
+    }
+  ]
+}

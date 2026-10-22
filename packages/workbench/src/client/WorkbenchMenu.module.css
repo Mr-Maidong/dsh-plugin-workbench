@@ -1,0 +1,27 @@
+/*
+ * Workbench entries in a tab's actions menu.
+ *
+ * Styled as bare rows: the surrounding menu owns its own padding, radius, and
+ * surface, and an entry that drew its own card inside it would look like a
+ * nested panel rather than an action. Only the tokens the live theme actually
+ * ships are used; see WorkbenchTab.module.css for the full note.
+ */
+.item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+}

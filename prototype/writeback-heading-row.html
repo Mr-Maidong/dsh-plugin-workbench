@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>工作台 · 写回控件改版原型（标题行 + 放大镜）</title>
+<style>
+/* ──────────────────────────────────────────────────────────────────────────
+   与 sidebar-workbench.html 同一套令牌回退值：真实插件里由 dsh-client-ui-theme
+   注入，这里给浅/深两套，让本页脱离 DSH 也能独立打开审阅。数值全部照抄插件
+   产物（.titleRow gap 10 / .titleText 14·550·21 / 图标按钮 24px·overhang -4px），
+   所以这里的观感与真实侧边栏一致。
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --dsw-alias-bg-base: #ffffff;
+  --dsw-alias-bg-layer-1: #f6f6f7;
+  --dsw-alias-bg-layer-2: #ededf0;
+  --dsw-specific-sidebar-fill: #fafafb;
+  --dsw-alias-border-l1: rgba(0,0,0,.055);
+  --dsw-alias-border-l2: rgba(0,0,0,.09);
+  --dsw-alias-label-primary: #17171a;
+  --dsw-alias-label-secondary: #4d4d55;
+  --dsw-alias-label-tertiary: #7e7e88;
+  --dsw-alias-label-caption: #a4a4ae;
+  --dsw-alias-interactive-bg-hover: rgba(0,0,0,.045);
+  --dsw-alias-brand-primary: #2b6cf5;
+  --dsw-alias-state-business-primary: #2b6cf5;
+  --dsw-alias-state-success-primary: #12a05c;
+  --dsw-alias-state-idle-primary: #8e8e98;
+  --dsw-alias-state-error-primary: #d93b3b;
+  --dsh-focus-ring-color: #2b6cf5;
+  --card-shadow: 0 1px 2px rgba(0,0,0,.05), 0 0 0 .5px rgba(0,0,0,.04);
+}
+[data-theme="dark"] {
+  --dsw-alias-bg-base: #1c1c1f;
+  --dsw-alias-bg-layer-1: #242429;
+  --dsw-alias-bg-layer-2: #161618;
+  --dsw-specific-sidebar-fill: #1f1f23;
+  --dsw-alias-border-l1: rgba(255,255,255,.055);
+  --dsw-alias-border-l2: rgba(255,255,255,.09);
+  --dsw-alias-label-primary: #f0f0f3;
+  --dsw-alias-label-secondary: #ababb5;
+  --dsw-alias-label-tertiary: #7f7f8b;
+  --dsw-alias-label-caption: #61616d;
+  --dsw-alias-interactive-bg-hover: rgba(255,255,255,.06);
+  --dsw-alias-brand-primary: #5b8cff;
+  --dsw-alias-state-business-primary: #5b8cff;
+  --dsw-alias-state-success-primary: #32c07a;
+  --dsw-alias-state-idle-primary: #7f7f8b;
+  --dsw-alias-state-error-primary: #ef5f5f;
+  --dsh-focus-ring-color: #5b8cff;
+  --card-shadow: 0 1px 2px rgba(0,0,0,.28), 0 0 0 .5px rgba(255,255,255,.045);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 26px 22px 90px; }
+h1 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+h2 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+h3 { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); }
+p { margin: 0 0 8px; }
+.lead { max-width: 78ch; color: var(--dsw-alias-label-secondary); font-size: 13px; }
+.lead b { color: var(--dsw-alias-label-primary); font-weight: 600; }
+.note { color: var(--dsw-alias-label-tertiary); font-size: 12px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+.toolbar {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
+  margin: 14px -22px 0; padding: 10px 22px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: .5px solid var(--dsw-alias-border-l1);
+}
+.toolbar a {
+  color: var(--dsw-alias-label-secondary); text-decoration: none; font-size: 12px;
+  padding: 3px 9px; border-radius: 999px; border: .5px solid var(--dsw-alias-border-l2);
+}
+.toolbar a:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.toolbar button {
+  margin-left: auto; height: 26px; padding: 0 11px; border: .5px solid var(--dsw-alias-border-l2);
+  border-radius: 999px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-secondary);
+  font: inherit; font-size: 12px; cursor: pointer;
+}
+section { margin-top: 30px; }
+.grid { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; }
+.pane {
+  width: 330px; padding: 12px; border-radius: 16px;
+  border: .5px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-specific-sidebar-fill);
+}
+.pane > h3 { display: flex; align-items: center; gap: 6px; }
+.pill {
+  display: inline-flex; align-items: center; height: 17px; padding: 0 7px; border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent);
+  color: var(--dsw-alias-state-business-primary); font-size: 10.5px; font-weight: 600; letter-spacing: .02em;
+}
+.pill.quiet { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-tertiary); }
+
+/* ── 卡片外壳：照插件产物缩小一号 ─────────────────────────────────────── */
+.card {
+  border: .5px solid var(--dsw-alias-border-l1); border-radius: 14px;
+  background: var(--dsw-alias-bg-base); box-shadow: var(--card-shadow);
+}
+.cardMain { display: flex; gap: 10px; padding: 11px 12px; }
+.glyph { flex: none; padding-top: 3px; }
+.body { flex: 1; min-width: 0; }
+.titleRow { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.titleText {
+  flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent;
+  color: var(--dsw-alias-label-primary); font: inherit; font-size: 14px; font-weight: 550;
+  line-height: 21px; letter-spacing: -.005em; text-align: left; cursor: text;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.desc { margin-top: 2px; color: var(--dsw-alias-label-secondary); font-size: 12.5px; line-height: 18px; }
+.metaRow { display: flex; align-items: center; gap: 8px; margin-top: 7px; font-size: 11.5px; color: var(--dsw-alias-label-caption); }
+.metaRow .spacer { flex: 1; }
+.tag {
+  display: inline-flex; align-items: center; height: 21px; padding: 0 9px; border-radius: 999px;
+  border: .5px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-tertiary); font-size: 11.5px;
+}
+.statusWord { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 5px; height: 5px; border-radius: 50%; }
+.dot.open { background: var(--dsw-alias-state-idle-primary); }
+.dot.in_progress { background: var(--dsw-alias-state-business-primary); }
+.dot.done { background: var(--dsw-alias-state-success-primary); }
+
+/* ── 图标按钮族（发送键 / 放大镜 / 删除）：一份尺寸，三种颜色语义 ────── */
+.iconBtn {
+  display: inline-flex; align-items: center; justify-content: center; align-self: center;
+  flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: var(--dsw-alias-label-caption); cursor: pointer;
+  transition: background .13s, color .13s;
+}
+.iconBtn:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); }
+.iconBtn:focus-visible { outline: 2px solid var(--dsh-focus-ring-color); outline-offset: 1px; }
+/* 发送键今天就在标题行，右端 -4px 的出血让它贴住卡片内边距；放大镜要接在它右边，
+   于是出血权移交：发送键右侧归零，放大镜接管 -4px，两者之间留 2px（-8px 抵消
+   行内 10px 的 gap）。这与页脚两个图标按钮的 2px 间距同源。 */
+.sendBtn { margin: -3px -4px -3px 0; }
+.sendBtn + .wb { margin: -3px -4px -3px -8px; }
+/* 单独出现（没有发送键可依附）时仍然贴右端 */
+.wb { margin: -3px -4px -3px 0; }
+.sendBtn + .wb { margin-left: -8px; }
+
+/* V4：带文字的胶囊，高度与 24px 图标按钮齐平 */
+.wbPill {
+  display: inline-flex; align-items: center; gap: 5px; align-self: center; flex: none;
+  height: 24px; margin: -3px -4px -3px -8px; padding: 0 10px 0 7px;
+  border: .5px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent;
+  color: var(--dsw-alias-label-secondary); font: inherit; font-size: 11.5px; cursor: pointer;
+  transition: background .13s, color .13s, border-color .13s;
+}
+.wbPill:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.wbPill:focus-visible { outline: 2px solid var(--dsh-focus-ring-color); outline-offset: 1px; }
+
+/* 状态变体 */
+.wb.isBusy { color: var(--dsw-alias-brand-primary); }
+.wb.isBusy:hover { color: var(--dsw-alias-brand-primary); }
+.wb.isOff { opacity: .38; cursor: default; }
+.wb.isOff:hover { background: transparent; color: var(--dsw-alias-label-caption); }
+.wb.isHover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); }
+.wb.isFocus { outline: 2px solid var(--dsh-focus-ring-color); outline-offset: 1px; }
+
+/* 放大镜 3.2× 观察窗 */
+.zoom { display: flex; align-items: center; justify-content: center; height: 62px; margin: 10px 0 4px;
+  border: .5px dashed var(--dsw-alias-border-l2); border-radius: 12px; color: var(--dsw-alias-label-secondary); }
+.zoom svg { transform: scale(3.2); }
+
+/* 展开区（本次改动后只剩删除） */
+.detail { padding: 0 14px 12px 42px; }
+.detailDivider { height: .5px; margin: 0 0 10px; background: var(--dsw-alias-border-l1); }
+.detailBar { display: flex; align-items: center; gap: 8px; }
+.detailHint { flex: 0 1 auto; min-width: 0; color: var(--dsw-alias-label-caption); font-size: 11.5px; }
+.detailDel {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px;
+  margin: -3px -4px -3px 0; padding: 0; border: 0; border-radius: 8px; background: transparent;
+  color: var(--dsw-alias-label-caption); cursor: pointer;
+}
+.detailDel:hover { background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent); color: var(--dsw-alias-state-error-primary); }
+/* 现状对照：展开区里的实心胶囊（P3 已实现，本次要搬走它） */
+.legacyBtn {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  height: 30px; padding: 0 13px; border: .5px solid transparent; border-radius: 999px;
+  background: var(--dsw-alias-state-business-primary); color: var(--dsw-alias-label-primary);
+  font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.legacyBar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.legacyBar .legacyBtn { margin-right: auto; }
+
+/* 结论区 */
+.qa { margin-top: 12px; padding: 14px 16px; border-radius: 14px; border: .5px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-base); }
+.qa ol { margin: 0; padding-left: 20px; }
+.qa li { margin-bottom: 7px; font-size: 13px; }
+.qa .pick { color: var(--dsw-alias-state-business-primary); font-weight: 600; }
+table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 12.5px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: .5px solid var(--dsw-alias-border-l1); vertical-align: top; }
+th { color: var(--dsw-alias-label-tertiary); font-weight: 600; font-size: 11.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>写回控件改版原型：搬进标题行 + 放大镜语汇</h1>
+<p class="lead">
+  两条要求：<b>①「生成总结并写回」文案改为「待办总结」</b>；<b>②控件放到发送键同一行的右侧，做成放大镜（分析）的设计感</b>。
+  控件的动作和状态机不变（§4.5：`open → in_progress`、`in_progress` 重试不写盘、`done` 没有边），变的是<b>位置</b>和<b>形态</b>。
+  下面给 4 个形态、3 个状态、整卡预览和现状对照，请挑一个（或给一句修改意见）。
+</p>
+
+<div class="toolbar">
+  <a href="#shapes">① 四个形态</a>
+  <a href="#states">② 三个状态</a>
+  <a href="#cards">③ 整卡预览</a>
+  <a href="#legacy">④ 现状对照</a>
+  <a href="#ask">⑤ 要你定的三件事</a>
+  <button type="button" id="theme">切换浅色 / 深色</button>
+</div>
+
+<!-- ══════════════════════════════ ① 形态 ══════════════════════════════ -->
+<section id="shapes">
+  <h2>① 四个形态（都在发送键右侧，同一行）</h2>
+  <p class="note">每个形态都给「真实大小」和「3.2× 放大」两处；发送键在最左，放大镜接在它右边，行尾出血 −4px 由放大镜接管。</p>
+  <div class="grid">
+
+    <div class="pane">
+      <h3>V1 镜内折线 <span class="pill">推荐</span></h3>
+      <div class="card"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText">收敛写回链路的冲突提示</button>
+            <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="iconBtn wb" title="待办总结">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="metaRow"><span class="tag">#2855e7e4</span><span class="tag">DSH插件</span><span class="spacer"></span><span>18:50</span></div>
+        </div>
+      </div></div>
+      <div class="zoom"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <p class="note">镜片里一条上行的折线 = 「看进去、找趋势」。13px 下折线只剩 3 段，不糊。</p>
+    </div>
+
+    <div class="pane">
+      <h3>V2 镜内柱状</h3>
+      <div class="card"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText">收敛写回链路的冲突提示</button>
+            <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="iconBtn wb" title="待办总结">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M5.3 8.6v-1.4M6.9 8.6V5.6M8.5 8.6V7.1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="metaRow"><span class="tag">#2855e7e4</span><span class="tag">DSH插件</span><span class="spacer"></span><span>18:50</span></div>
+        </div>
+      </div></div>
+      <div class="zoom"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M5.3 8.6v-1.4M6.9 8.6V5.6M8.5 8.6V7.1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <p class="note">柱状更直白地是「统计/分析」，但三根柱在 13px 下比折线更密，深色主题里容易糊成一团。</p>
+    </div>
+
+    <div class="pane">
+      <h3>V3 纯放大镜（最克制）</h3>
+      <div class="card"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText">收敛写回链路的冲突提示</button>
+            <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="iconBtn wb" title="待办总结">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="metaRow"><span class="tag">#2855e7e4</span><span class="tag">DSH插件</span><span class="spacer"></span><span>18:50</span></div>
+        </div>
+      </div></div>
+      <div class="zoom"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      <p class="note">与发送键、下拉箭头完全同一族，最不容易出错；代价是「总结」这层意思全靠 tooltip 和 tooltip 之外的语境。</p>
+    </div>
+
+    <div class="pane">
+      <h3>V4 放大镜 + 文字「待办总结」</h3>
+      <div class="card"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText">收敛写回链路的冲突提示</button>
+            <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="wbPill">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              待办总结
+            </button>
+          </div>
+          <div class="metaRow"><span class="tag">#2855e7e4</span><span class="tag">DSH插件</span><span class="spacer"></span><span>18:50</span></div>
+        </div>
+      </div></div>
+      <p class="note">文案直接看得见，不用猜；代价是标题可用宽度少了约 66px，长标题更早被省略号截断——这是原来把按钮放进展开区的原因之一。</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════ ② 状态 ══════════════════════════════ -->
+<section id="states">
+  <h2>② 三个状态（以 V1 为例）与 hover / focus</h2>
+  <p class="note">动作语义不变：`open` 是主要动作，`in_progress` 是重试，`done` 没有边。差别在「没点击时怎么被看见」。</p>
+  <div class="grid">
+
+    <div class="pane">
+      <h3>未开始 · open</h3>
+      <p class="note">静息态与发送键同色（caption），hover 才浮出底色。tooltip：<span class="mono">待办总结</span></p>
+      <div class="zoom"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+
+    <div class="pane">
+      <h3>进行中 · in_progress（重试）</h3>
+      <p class="note">镜片染上品牌色 = 「有一次写回在途，可再推一次」，这是本行唯一会变色的元素。tooltip：<span class="mono">待办总结 · 重新写回</span></p>
+      <div class="card"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-business-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText">收敛写回链路的冲突提示</button>
+            <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="iconBtn wb isBusy" title="待办总结 · 重新写回"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="metaRow"><span class="statusWord"><span class="dot in_progress"></span>进行中</span><span class="tag">#2855e7e4</span><span class="spacer"></span><span>18:50</span></div>
+        </div>
+      </div></div>
+      <p class="note">另一种做法：不换色，只在 tooltip 里区分（更安静，但两次点击看起来完全一样）。</p>
+    </div>
+
+    <div class="pane">
+      <h3>已完成 · done（两个选项）</h3>
+      <p class="note">D1（推荐）隐藏：完成项的标题行只剩发送键，行尾干净；理由写在状态词 tooltip 里。</p>
+      <div class="card"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-success-primary)"/><path d="M5.3 8.2l1.9 1.9 3.5-3.7" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dsw-alias-state-success-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText" style="color:var(--dsw-alias-label-tertiary);font-weight:450">收敛写回链路的冲突提示</button>
+            <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="metaRow"><span class="statusWord" title="状态由写回自动更新"><span class="dot done"></span>已完成</span><span class="tag">#2855e7e4</span><span class="spacer"></span><span>18:50</span></div>
+        </div>
+      </div></div>
+      <h3 style="margin-top:14px">D2 置灰保留</h3>
+      <div class="card"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-success-primary)"/><path d="M5.3 8.2l1.9 1.9 3.5-3.7" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dsw-alias-state-success-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText" style="color:var(--dsw-alias-label-tertiary);font-weight:450">收敛写回链路的冲突提示</button>
+            <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="iconBtn wb isOff" title="已完成 · 状态由写回自动更新" disabled>
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="metaRow"><span class="statusWord"><span class="dot done"></span>已完成</span><span class="tag">#2855e7e4</span><span class="spacer"></span><span>18:50</span></div>
+        </div>
+      </div></div>
+      <p class="note">位置稳定（列表里不跳），但一个永远点不动的灰图标属于「占位噪声」，苹果系的做法更接近 D1。</p>
+    </div>
+
+    <div class="pane">
+      <h3>hover / focus（V1）</h3>
+      <p class="note">hover：与发送键同一层 4.5% 底色；focus：2px 焦点环，offset 1px——沿用已有两条规则，不新增视觉语言。</p>
+      <div class="zoom"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="card" style="margin-top:10px"><div class="cardMain">
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText">hover 示例</button>
+            <button class="iconBtn sendBtn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="iconBtn wb isHover"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div></div>
+      <div class="card" style="margin-top:8px"><div class="cardMain">
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText">focus 示例</button>
+            <button class="iconBtn sendBtn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="iconBtn wb isFocus"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════ ③ 整卡 ══════════════════════════════ -->
+<section id="cards">
+  <h2>③ 整卡预览（V1 + D1）</h2>
+  <p class="note">
+    关键差别：控件现在<b>不用展开就能点</b>——标题行在折叠状态下也在。展开区尾部因此只剩删除，原先那句
+    「已完成 · 状态由写回自动更新」的提示改挂在状态词与置灰按钮的 tooltip 上（否则同一条信息会出现两处）。
+  </p>
+  <div class="grid">
+    <div class="pane">
+      <h3>折叠 · open</h3>
+      <div class="card"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow">
+            <button class="titleText">继续P3开发</button>
+            <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button class="iconBtn wb" title="待办总结"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="metaRow"><span class="tag">#2855e7e4</span><span class="tag">DSH插件</span><span class="spacer"></span><span>18:50</span><span class="iconBtn" style="width:20px;height:20px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        </div>
+      </div></div>
+      <p class="note">一行里两个入口：发送键把这条推进对话，放大镜要它交一份待办总结。两者都是「把这条推出去」，但去向不同，所以造型不同（箭头 vs 镜片）。</p>
+    </div>
+
+    <div class="pane">
+      <h3>展开 · open（无总结）</h3>
+      <div class="card">
+        <div class="cardMain">
+          <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+          <div class="body">
+            <div class="titleRow">
+              <button class="titleText">继续P3开发</button>
+              <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+              <button class="iconBtn wb" title="待办总结"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6.9" cy="6.9" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3 13.9 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.7 7.9 6.1 6.1l1.1 1.2L8.9 4.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+            <div class="desc">把写回链路的冲突提示收敛成一条，并把按钮搬进标题行。</div>
+            <div class="metaRow"><span class="tag">#2855e7e4</span><span class="tag">DSH插件</span><span class="spacer"></span><span>18:50</span><span class="iconBtn" style="width:20px;height:20px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90 8 8)"/></svg></span></div>
+          </div>
+        </div>
+        <div class="detail">
+          <div class="detailDivider"></div>
+          <p class="note" style="margin:0 0 10px">还没有待办总结</p>
+          <div class="detailBar">
+            <span class="spacer" style="flex:1"></span>
+            <button class="detailDel" title="删除"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3.5 5h9M6.5 5V3.8h3V5M5 5l.6 7.2h4.8L11 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <p class="note">展开区回到「只读总结 + 一个删除」，不再有按钮和提示语，页脚也因此安静下来。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ ④ 现状 ══════════════════════════════ -->
+<section id="legacy">
+  <h2>④ 现状对照（P3 已实现，本次要搬走）</h2>
+  <div class="grid">
+    <div class="pane">
+      <h3>当前：展开区 · 实心胶囊</h3>
+      <div class="card">
+        <div class="cardMain">
+          <div class="body">
+            <div class="titleRow"><button class="titleText">继续P3开发</button>
+              <button class="iconBtn sendBtn" title="加入对话（填写发送）"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M9.5 3.6 5.1 8l4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 8h7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            </div>
+            <div class="metaRow"><span class="tag">#2855e7e4</span><span class="spacer"></span><span>18:50</span></div>
+          </div>
+        </div>
+        <div class="detail">
+          <div class="detailDivider"></div>
+          <p class="note" style="margin:0 0 10px">还没有待办总结</p>
+          <div class="legacyBar">
+            <button class="legacyBtn">生成总结并写回</button>
+            <button class="detailDel" title="删除"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3.5 5h9M6.5 5V3.8h3V5M5 5l.6 7.2h4.8L11 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <p class="note">优点：文案完整、标题不被挤占、必须展开才能点（防误触）。缺点：折叠状态下完全看不出这条能写回，实心品牌色也让它在卡片里过分抢眼。</p>
+    </div>
+    <div class="pane" style="width:auto;flex:1;min-width:330px">
+      <h3>改动一览</h3>
+      <table>
+        <tr><th>项</th><th>现在</th><th>改后</th></tr>
+        <tr><td>位置</td><td>展开区尾部左侧</td><td>标题行、发送键右侧</td></tr>
+        <tr><td>形态</td><td>30px 实心品牌胶囊 + 文字</td><td>24px 静息图标（放大镜），hover 才浮底色</td></tr>
+        <tr><td>文案</td><td>生成总结并写回 / 重新写回</td><td>待办总结（tooltip / aria-label）</td></tr>
+        <tr><td>可见条件</td><td>展开后</td><td>始终（折叠也能点）</td></tr>
+        <tr><td>完成项</td><td>不显示按钮，展开区提示「已完成 · 状态由写回自动更新」</td><td>D1 隐藏（信息挂状态词 tooltip）／D2 置灰</td></tr>
+        <tr><td>展开区尾部</td><td>写回按钮 + 删除</td><td>只剩删除</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ ⑤ 问题 ══════════════════════════════ -->
+<section id="ask">
+  <h2>⑤ 要你定的三件事</h2>
+  <div class="qa">
+    <ol>
+      <li><b>形态选哪个</b>：<span class="pick">V1 镜内折线（推荐）</span> / V2 镜内柱状 / V3 纯放大镜 / V4 放大镜+「待办总结」文字胶囊。</li>
+      <li><b>已完成项</b>：<span class="pick">D1 隐藏（推荐）</span> / D2 置灰保留 / 保持现状（把提示语留在展开区）。</li>
+      <li><b>进行中是否染色</b>：<span class="pick">染品牌色（推荐，一眼看出「可重试」）</span> / 不染，只在 tooltip 里区分。</li>
+    </ol>
+    <p class="note" style="margin:0">
+      另外一条纯文案确认：展开区里那块总结的标题现在是「总结 / Summary」，是否也一并改成「待办总结」？（它和按钮现在叫同一个名字会更顺，但会和「执行总结」的旧口径再分叉一次。）
+    </p>
+  </div>
+</section>
+
+</div>
+<script>
+  const root = document.documentElement
+  document.getElementById('theme').addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'
+  })
+</script>
+</body>
+</html>

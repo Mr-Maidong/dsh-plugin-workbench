@@ -1,0 +1,1181 @@
+/**
+ * The workbench tab body.
+ *
+ * Everything is edited in place (DESIGN.md §5.4): a field's display state is
+ * plain text and its edit state is that very box with a wash and a caret (§9.14),
+ * so there are no save or revert buttons anywhere in this file. The three verbs
+ * are Enter (commit this field), blur (commit too — clicking away is not a
+ * cancel), and Escape (revert).
+ * Only `desc` differs, because it is the one multi-line field: Enter inserts a
+ * newline there instead of committing.
+ *
+ * Status is never interactive. It is derived — `done` is set by a write-back and
+ * by nothing else — so rendering it as something clickable would offer an action
+ * the Host does not have.
+ */
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import type { ReactNode } from 'react'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
+// Type-only: merges `sessionId` into every session-scoped slot's standard props.
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type { WorkItemRecord } from 'dsh-plugin-workbench/types'
+import type { WorkbenchLocaleKey } from './locales.ts'
+import { seedText } from './seed.ts'
+import type { WorkbenchFilterTier, WorkbenchSnapshot, WorkbenchStore } from './store.ts'
+import { workspaceOfSession } from './workspace-source.ts'
+import type { WorkspaceListSource } from './workspace-source.ts'
+import type { WriteBackQueued } from './write-back.ts'
+import css from './WorkbenchTab.module.css'
+
+/** What the slot's inject face supplies to the body. */
+export interface WorkbenchInjected {
+  /**
+   * The snapshot store for one session, created on first use.
+   *
+   * Per session, not per plugin: the seat is session-scoped, so two sessions can
+   * hold this pane at once and each must own its workspace, query, and list.
+   * Sharing one store would make them overwrite each other.
+   * @param sessionId - the session this pane belongs to.
+   * @returns that session's store.
+   */
+  readonly storeFor: (sessionId: string) => WorkbenchStore
+  /** The Client's Workspace list, so the pane can follow the conversation's workspace. */
+  readonly workspaces: WorkspaceListSource
+  /**
+   * Queue the user turn that asks the model to write this item's summary back.
+   *
+   * The second half of the write-back flow (§11.3), and the only place this pane
+   * spends a model turn on purpose: the request is an ordinary user message, so
+   * it is logged like anything else the user types. It is called only after the
+   * Host accepted the request, so the item is already `in_progress` when the
+   * model reads it. The result stays structural — the mount owns the session
+   * binding and the queue, this pane owns the copy — and a session that is not
+   * available is a state the user has to be told about rather than a silent
+   * no-op.
+   * @param sessionId - the session whose queue receives the prompt.
+   * @param item - the item the user asked about.
+   * @returns whether the turn was queued, and why not when it was not.
+   */
+  readonly requestWriteBack: (sessionId: string, item: WorkItemRecord) => Promise<WriteBackQueued>
+  /** @param message - clipboard failure text, logged by the mount. */
+  readonly reportCopyFailure: (message: string) => void
+}
+
+// Owned by the module that makes the call, so the result the pane renders and the
+// result the queue reports cannot drift; re-exported because this file publishes
+// the pane's prop face.
+export type { WriteBackQueued } from './write-back.ts'
+
+/** Props the slot delivers to the workbench body. */
+export type WorkbenchTabProps = PropsRuntime<'sidebar.right.pane.tab'> & InjectFace<WorkbenchInjected> & PropsLocale<'workbench'>
+
+/**
+ * The composer's public action face, as delivered to every session-scope slot.
+ *
+ * Declared structurally on purpose. `@deepseek-ai/dsh-client-ui-conversation`
+ * owns this interface (`client/contract/input.d.ts` → `InputActions`) and merges
+ * it into that package's `SessionStandardProps`, so the live Client hands it to
+ * this pane as a standard prop — but that package is not a dependency of this
+ * plugin, so the property carries no static type here. The names and arities
+ * below are copied from its published 0.2.0-rc.2 declaration.
+ *
+ * Every member is optional. A Client that stops sending the face, or sends a
+ * narrower one, then degrades to "no fill button" instead of throwing.
+ */
+export interface ComposerInputActions {
+  /** @returns a revision-guarded copy of the current editor selection. */
+  readonly captureInsertion?: () => unknown
+  /**
+   * Insert text at a captured selection without replacing later edits.
+   * @param text - plain text to insert in one undo step.
+   * @param span - a selection captured by `captureInsertion`.
+   * @returns false when the draft changed or the editor is locked.
+   */
+  readonly insertText?: (text: string, span: unknown) => boolean
+  /** Replace the whole draft — the documented programmatic-write path. */
+  readonly setDraft?: (text: string) => void
+  /** Return the keyboard to the composer. */
+  readonly focus?: () => void
+}
+
+/** Which field, if any, is being edited. */
+type Editing =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'create' }
+  | { readonly kind: 'field'; readonly id: string; readonly field: 'title' | 'desc' | 'tag'; readonly draft: string }
+
+/** One formatter for the module; constructing one per render is the slow path. */
+const RELATIVE = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+
+/**
+ * Compact "time since" for a card's right edge.
+ *
+ * The first minute is worded rather than counted: every action re-renders the
+ * pane, so a card that recounted its seconds would appear to tick whenever the
+ * user merely clicks around it. Below a minute the card therefore says the same
+ * thing, and only then does the stamp start to move — a minute at a time.
+ * @param iso - the record's `updateAt`.
+ * @param justNow - the localized wording for "less than a minute ago".
+ * @returns the age, or `''` when the stamp cannot be parsed.
+ */
+function relative(iso: string, justNow: string): string {
+  const then = Date.parse(iso)
+  if (Number.isNaN(then)) return ''
+  const seconds = Math.round((then - Date.now()) / 1000)
+  const magnitude = Math.abs(seconds)
+  if (magnitude < 60) return justNow
+  if (magnitude < 3600) return RELATIVE.format(Math.round(seconds / 60), 'minute')
+  if (magnitude < 86_400) return RELATIVE.format(Math.round(seconds / 3600), 'hour')
+  if (magnitude < 2_592_000) return RELATIVE.format(Math.round(seconds / 86_400), 'day')
+  if (magnitude < 31_536_000) return RELATIVE.format(Math.round(seconds / 2_592_000), 'month')
+  return RELATIVE.format(Math.round(seconds / 31_536_000), 'year')
+}
+
+/**
+ * How long the pane watches for a queued write-back to be answered.
+ *
+ * A write-back is a queued user turn, so it lands whenever the model gets to it —
+ * seconds later, or after a whole turn of other work. Nothing pushes the answer
+ * into this pane, because it is written into the Host's record and no event
+ * carries it (§9.19), so the pane re-reads on a slow timer instead: often enough
+ * to feel immediate, rarely enough that a model working for a minute costs tens
+ * of queries rather than thousands. The budget ends the watch, so a model that
+ * never writes anything costs one minute of quiet re-reads and then hands the
+ * control back to the user, who can simply ask again.
+ */
+const WRITE_BACK_INTERVAL_MS = 1500
+const WRITE_BACK_TICKS = 40
+
+/** Render the workbench pane. */
+export function WorkbenchTab(props: WorkbenchTabProps) {
+  const { workspaces, t, requestWriteBack: queueWriteBack } = props
+  const tabInfo = props.useTabInfo()
+  const store = props.storeFor(props.sessionId)
+
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot)
+  const workspaceSnapshot = useSyncExternalStore(workspaces.subscribe, workspaces.getSnapshot)
+  const workspaceItems = workspaceSnapshot.items
+
+  const [editing, setEditing] = useState<Editing>({ kind: 'none' })
+  const [expanded, setExpanded] = useState<readonly string[]>([])
+  const [notice, setNotice] = useState<string | undefined>(undefined)
+
+  /**
+   * The item whose write-back request has been sent and has not settled yet.
+   *
+   * One at a time, deliberately: §11.4 forbids initiating a second write-back
+   * while one is pending, so the pane holds an id rather than a set of them. It
+   * exists for two reasons — the control says so while the model works, and the
+   * settle effect below knows which item to re-read.
+   */
+  const [writeBack, setWriteBack] = useState<string | undefined>(undefined)
+
+  const visible = tabInfo.tab.visible
+  // The workspace this pane follows: the one the conversation it belongs to sits
+  // in, or `''` when it sits in none. Read afresh every render rather than
+  // remembered, because moving the conversation into another workspace is the one
+  // change that can happen under a pane that is already open.
+  const followed = workspaceOfSession(workspaceItems, props.sessionId) ?? ''
+
+  /**
+   * Follow that workspace, and re-read it when the pane comes back into view.
+   *
+   * One effect rather than two: pointing the store at a workspace already starts
+   * its load, so a separate refresh pass would fire a second request for the same
+   * list on every first open. Here the follow and the re-read of Tier 2 (§6.2)
+   * are mutually exclusive branches of a single pass.
+   */
+  useEffect(() => {
+    if (!visible) return
+    if (followed !== store.workspaceId) {
+      // An open editor belonged to the workspace being left — §5.4 edits in place,
+      // so it holds an id from the old list. The switcher closed it on the same
+      // event, and following closes it the same way. Returning the current state
+      // unchanged when there is nothing open keeps this from costing a render.
+      setEditing(current => (current.kind === 'none' ? current : { kind: 'none' }))
+      store.setWorkspace(followed)
+      return
+    }
+    // Another session may have written while this kept-mounted body was hidden,
+    // and it would otherwise show what it saw when it was last looked at.
+    if (followed !== '') void store.refresh()
+  }, [store, followed, visible])
+
+  /**
+   * Watch a queued write-back until its record says it is done.
+   *
+   * The effect depends on the id alone — deliberately not on the live snapshot.
+   * An earlier version read the store's own snapshot as a dependency *and*
+   * refreshed it from inside the same effect, so every store change re-armed the
+   * effect, which refreshed again: a render loop that crashed the whole pane
+   * (React #185). Reading the record inside the callback, and re-reading only on
+   * the timer, keeps the effect running exactly twice per request: once when the
+   * click arms it, once when it clears itself.
+   *
+   * Two readings end it: the record reaching `done` (the completion is in the
+   * Host's record, which is why it is fetched rather than merged), or the record
+   * leaving the current tier altogether, which is what a completed item does
+   * under the active tier (§5.3).
+   */
+  useEffect(() => {
+    if (writeBack === undefined) return
+    const id = writeBack
+    let ticks = 0
+    let timer = 0
+    let stopped = false
+    const answer = (): void => {
+      if (stopped) return
+      const status = store.getSnapshot().items.find(entry => entry.id === id)?.status
+      if (status === 'done' || status === undefined || ticks >= WRITE_BACK_TICKS) {
+        stopped = true
+        window.clearInterval(timer)
+        setWriteBack(undefined)
+      }
+    }
+    const tick = (): void => {
+      ticks += 1
+      void store.refresh().then(answer)
+    }
+    timer = window.setInterval(tick, WRITE_BACK_INTERVAL_MS)
+    // The first reading is immediate: the fast path can already be finished by
+    // the time the click returns, and waiting a full interval for that would look
+    // like the button did nothing.
+    tick()
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+    }
+  }, [writeBack, store])
+
+  const { active, done } = useMemo(() => {
+    const open: WorkItemRecord[] = []
+    const finished: WorkItemRecord[] = []
+    for (const item of snapshot.items) (item.status === 'done' ? finished : open).push(item)
+    return { active: open, done: finished }
+  }, [snapshot.items])
+
+  /*
+   * The composer's action face. This seat is session-scoped, and the conversation
+   * plugin merges its input actions into every session-scope slot's standard
+   * props, so the Client passes it in beside `sessionId`. Read through a cast
+   * because the declaring package is not a dependency of this plugin.
+   */
+  const inputActions = (props as unknown as { readonly inputActions?: ComposerInputActions }).inputActions
+
+  /** A face that can write nothing would only produce a dead control. */
+  const canFill = inputActions !== undefined
+    && (inputActions.insertText !== undefined || inputActions.setDraft !== undefined)
+
+  /**
+   * Put one work item into the composer's draft — filling, never submitting.
+   *
+   * `insertText` is the non-destructive path: it lands at the caret, keeps
+   * whatever the user already typed, and is one undo step. It is
+   * revision-guarded and refuses when the draft moved under us or the editor is
+   * locked, in which case `setDraft` keeps the click from being a silent no-op.
+   * @param item - the work item to hand over.
+   */
+  const fillComposer = (item: WorkItemRecord): void => {
+    const text = seedText(item)
+    if (text === '' || inputActions === undefined) return
+    const span = inputActions.captureInsertion?.()
+    const inserted = span !== undefined && inputActions.insertText?.(text, span) === true
+    if (!inserted) inputActions.setDraft?.(text)
+    inputActions.focus?.()
+  }
+
+  /** Report a failed write and re-sync whatever the Host says is current. */
+  const report = (result: { readonly code: string; readonly message?: string; readonly current?: WorkItemRecord }): void => {
+    if (result.code === 'conflict') {
+      if (result.current !== undefined) store.adoptConflict(result.current)
+      setNotice(t('error.conflict'))
+      return
+    }
+    if (result.code === 'not_found') {
+      setNotice(t('error.notFound'))
+      void store.refresh()
+      return
+    }
+    if (result.code === 'invalid') setNotice(t('error.invalid', { message: result.message ?? '' }))
+  }
+
+  /** Commit one inline field, clearing the editor only when the Host accepted. */
+  const commit = async (item: WorkItemRecord, field: 'title' | 'desc' | 'tag', draft: string): Promise<void> => {
+    setNotice(undefined)
+    const result = field === 'desc'
+      ? await store.setDesc(item, draft)
+      : await store.update(item, { [field]: draft })
+    if (result.code === 'ok') { setEditing({ kind: 'none' }); return }
+    report(result)
+    setEditing({ kind: 'none' })
+  }
+
+  /**
+   * Ask for this item's write-back: both halves of §11.3 in one action.
+   *
+   * The Host records the request first — the `open → in_progress` edge, or its
+   * retry (DESIGN.md §4.5) — and only then is the user turn queued. A request the
+   * Host refused must not reach the model, or the model would summarize an item
+   * the user's own write never moved. The queued turn costs a real model turn,
+   * which is why the pane holds `writeBack` until the session settles; a request
+   * that never reached the queue is reported instead of leaving the control
+   * looking dead, which is exactly how the missing half behaved before §9.19.
+   * @param item - the record to push.
+   */
+  const requestWriteBack = async (item: WorkItemRecord): Promise<void> => {
+    setNotice(undefined)
+    // One write-back in flight at a time: a second request would ask the model
+    // for the same summary twice, and §11.4 forbids exactly that.
+    if (writeBack !== undefined) return
+    setWriteBack(item.id)
+    const result = await store.requestComplete(item)
+    if (result.code !== 'ok') {
+      setWriteBack(undefined)
+      report(result)
+      return
+    }
+    let queued: WriteBackQueued
+    try {
+      queued = await queueWriteBack(props.sessionId, item)
+    } catch (cause) {
+      // The injected face is expected to be total (§9.23), but before that fix a
+      // throw here left the control pending forever with nothing but a console
+      // stack — the one outcome §9.19 forbids. Report it like any refusal.
+      queued = { ok: false, message: cause instanceof Error ? cause.message : String(cause) }
+    }
+    if (queued.ok) return
+    setWriteBack(undefined)
+    setNotice(queued.sessionMissing === true
+      ? t('writeback.noSession')
+      : t('writeback.failed', { message: queued.message ?? '' }))
+  }
+
+  const createItem = async (title: string): Promise<void> => {
+    const trimmed = title.trim()
+    if (trimmed === '') { setEditing({ kind: 'none' }); return }
+    setNotice(undefined)
+    const result = await store.create(trimmed, '', '')
+    if (result.code !== 'ok') report(result)
+    setEditing({ kind: 'none' })
+  }
+
+  const toggleExpanded = (id: string): void => {
+    setExpanded(current => current.includes(id) ? current.filter(entry => entry !== id) : [...current, id])
+  }
+
+  /**
+   * Delete one item, after asking.
+   *
+   * Deletion is the only irreversible thing this pane offers — everything else is
+   * an edit to a record that keeps its identity — so it is the one action that
+   * gets a confirmation. The text names the title, because a list of similar
+   * items is exactly where a misclick happens.
+   * @param item - the record to delete.
+   */
+  const removeItem = async (item: WorkItemRecord): Promise<void> => {
+    if (!window.confirm(t('action.deleteConfirm', { title: item.title }))) return
+    setNotice(undefined)
+    const result = await store.remove(item.id)
+    if (result.code !== 'ok') report(result)
+  }
+
+  if (workspaceItems.length === 0) {
+    return (
+      <div className={css.pane}>
+        <div className={css.empty}>
+          <p>{t('workspace.none')}</p>
+          <p className={css.emptyHint}>{t('workspace.noneHint')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // The conversation sits in no workspace, so there is no work list this pane could
+  // legitimately show. Keyed on `followed` rather than on the store, so the message
+  // does not depend on an effect having run first.
+  if (followed === '') {
+    return (
+      <div className={css.pane}>
+        <div className={css.empty}>
+          <p>{t('workspace.unassigned')}</p>
+          <p className={css.emptyHint}>{t('workspace.unassignedHint')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const tiers: readonly WorkbenchFilterTier[] = ['all', 'active', 'done', 'archived']
+
+  return (
+    <div className={css.pane}>
+      <div className={css.toolbar}>
+        <div className={css.searchRow}>
+          <label className={css.searchField}>
+            <SearchGlyph />
+            <input
+              className={css.searchInput}
+              type="search"
+              value={snapshot.query}
+              placeholder={t('search.placeholder')}
+              onChange={event => { store.setQuery(event.target.value) }}
+            />
+          </label>
+        </div>
+        <div className={css.filterRow}>
+          {tiers.map(tier => (
+            <button
+              key={tier}
+              type="button"
+              className={[
+                css.chip,
+                (tier === 'all' || tier === 'active') && css.chipFlat,
+                tier === snapshot.filter && css.chipActive,
+              ].filter(Boolean).join(' ')}
+              onClick={() => {
+                setEditing({ kind: 'none' })
+                store.setFilter(tier)
+              }}
+            >
+              {t(`filter.${tier}` as WorkbenchLocaleKey)}
+              {/* Per-tier totals, as in the prototype. They describe the
+                  workspace, not the current page, so a search that narrows the
+                  list to one row still shows how much is in each tier. */}
+              <span className={css.chipCount}>{snapshot.counts[tier]}</span>
+            </button>
+          ))}
+          <span className={css.filterSpacer} />
+          <button
+            type="button"
+            className={css.iconBtn}
+            title={t('action.create')}
+            aria-label={t('action.create')}
+            onClick={() => { setEditing({ kind: 'create' }) }}
+          >
+            <PlusGlyph />
+          </button>
+        </div>
+      </div>
+
+      <div className={css.scroller}>
+        {notice !== undefined && <p className={css.notice}>{notice}</p>}
+
+        {snapshot.phase === 'loading' && (
+          <div className={css.skeletonList}>
+            <div className={css.skeleton} />
+            <div className={css.skeleton} />
+          </div>
+        )}
+
+        {snapshot.phase === 'error' && (
+          <>
+            <p className={`${css.status} ${css.statusError}`}>
+              {t('state.error', { message: snapshot.error?.message ?? '' })}
+            </p>
+            <button type="button" className={css.retryBtn} onClick={() => { void store.refresh() }}>
+              {t('state.retry')}
+            </button>
+          </>
+        )}
+
+        {snapshot.phase === 'ready' && (
+          <>
+            {editing.kind === 'create' && (
+              <ul className={css.list}>
+                <li className={`${css.card} ${css.cardComposing}`}>
+                  <div className={css.cardHead}>
+                    <span className={`${css.glyph} ${css.glyphComposing}`}>
+                      <StatusGlyph />
+                    </span>
+                    <div className={css.cardBody}>
+                      <Composer
+                        t={t}
+                        onCommit={title => { void createItem(title) }}
+                        onCancel={() => { setEditing({ kind: 'none' }) }}
+                      />
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            )}
+
+            {snapshot.items.length === 0 && editing.kind !== 'create' && (
+              <div className={css.empty}>
+                <EmptyGlyph />
+                {snapshot.query !== '' || snapshot.filter !== 'all'
+                  ? (
+                      <>
+                        <p>{t('empty.filtered')}</p>
+                        <p className={css.emptyHint}>{t('empty.filteredHint')}</p>
+                      </>
+                    )
+                  : (
+                      <>
+                        <p>{t('empty.title')}</p>
+                        <p className={css.emptyHint}>{t('empty.hint')}</p>
+                      </>
+                    )}
+              </div>
+            )}
+
+            {/* Grouping is a property of the 全部 tier only, and a heading is
+                drawn only when there is a second group to tell it apart from:
+                with nothing finished, "未完成 · 3" is a label the list below it
+                already says. */}
+            {snapshot.filter === 'all' && active.length > 0 && done.length > 0 && (
+              <p className={css.groupLabel}>{t('group.active')} · {active.length}</p>
+            )}
+            <ul className={css.list}>
+              {(snapshot.filter === 'all' ? active : snapshot.filter === 'done' ? done : snapshot.items).map(item => (
+                <Card
+                  key={item.id}
+                  item={item}
+                  t={t}
+                  editing={editing}
+                  open={expanded.includes(item.id)}
+                  pending={writeBack === item.id}
+                  onEdit={next => { setEditing(next); setNotice(undefined) }}
+                  onCommit={(field, draft) => { void commit(item, field, draft) }}
+                  onCancel={() => { setEditing({ kind: 'none' }) }}
+                  onToggle={() => { toggleExpanded(item.id) }}
+                  onDelete={() => { void removeItem(item) }}
+                  onRequestComplete={() => { void requestWriteBack(item) }}
+                  onFill={canFill ? () => { fillComposer(item) } : undefined}
+                />
+              ))}
+            </ul>
+            {/* §9.26: each group shows whenever its own tier has items. The
+                headings stay paired — both drawn only when both groups exist,
+                per §5.4's one-threshold rule — but a workspace whose work is all
+                finished must still show its finished group. The old guard
+                (`done && active`) is what left 全部 blank for it. */}
+            {snapshot.filter === 'all' && done.length > 0 && (
+              <>
+                {active.length > 0 && (
+                  <p className={css.groupLabel}>{t('group.done')} · {done.length}</p>
+                )}
+                <ul className={css.list}>
+                  {done.map(item => (
+                    <Card
+                      key={item.id}
+                      item={item}
+                      t={t}
+                      editing={editing}
+                      open={expanded.includes(item.id)}
+                      pending={writeBack === item.id}
+                      onEdit={next => { setEditing(next); setNotice(undefined) }}
+                      onCommit={(field, draft) => { void commit(item, field, draft) }}
+                      onCancel={() => { setEditing({ kind: 'none' }) }}
+                      onToggle={() => { toggleExpanded(item.id) }}
+                      onDelete={() => { void removeItem(item) }}
+                      onRequestComplete={() => { void requestWriteBack(item) }}
+                      onFill={canFill ? () => { fillComposer(item) } : undefined}
+                    />
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {snapshot.total > snapshot.items.length && (
+              <p className={css.status}>{t('list.more', { count: snapshot.total - snapshot.items.length })}</p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Props shared by every card, including the composer's. */
+interface CardProps {
+  readonly item: WorkItemRecord
+  readonly t: (key: WorkbenchLocaleKey, params?: Record<string, string | number>) => string
+  readonly editing: Editing
+  readonly open: boolean
+  /**
+   * This card's write-back request is sent and has not settled yet (§9.19).
+   *
+   * Optional because `CardProps` is shared with the composer, which is not a
+   * record and has no write-back to wait for.
+   */
+  readonly pending?: boolean
+  readonly onEdit: (next: Editing) => void
+  readonly onCommit: (field: 'title' | 'desc' | 'tag', draft: string) => void
+  readonly onCancel: () => void
+  readonly onToggle: () => void
+  readonly onDelete: () => void
+  /**
+   * Ask for a write-back on this item (DESIGN.md §4.5). Required, like delete: the
+   * pane always exposes the call, and the card decides which of the states the
+   * control is drawn in from `item.status` alone.
+   */
+  readonly onRequestComplete: () => void
+  /**
+   * Hand this item to the composer. Absent when the Client does not expose the
+   * composer's action face to slots, in which case no button is rendered.
+   */
+  readonly onFill?: (() => void) | undefined
+}
+
+/** One work item. */
+function Card({
+  item, t, editing, open, pending = false, onEdit, onCommit, onCancel, onToggle, onDelete, onRequestComplete, onFill,
+}: CardProps): ReactNode {
+  const isEditing = (field: 'title' | 'desc' | 'tag'): boolean =>
+    editing.kind === 'field' && editing.id === item.id && editing.field === field
+  const draftOf = (field: 'title' | 'desc' | 'tag'): string =>
+    editing.kind === 'field' && editing.id === item.id && editing.field === field ? editing.draft : ''
+
+  const classes = [css.card]
+  if (item.status === 'done') classes.push(css.cardDone)
+  if (item.archived) classes.push(css.cardArchived)
+
+  return (
+    <li className={classes.join(' ')}>
+      <div className={css.cardHead}>
+        {/* The prototype's ring in a fixed 17px slot: the slot, not the glyph, is
+            what the expanded area's indent is measured against. */}
+        <span
+          className={item.status === 'done' ? `${css.glyph} ${css.glyphDone}` : css.glyph}
+          title={t('card.statusHint')}
+        >
+          <StatusGlyph done={item.status === 'done'} />
+        </span>
+        <div className={css.cardBody}>
+          {/* The heading line: the title, then the two controls that push this item
+              out of the list — to the composer, and to a write-back request. It is
+              where the send control has lived since §9.11 第 5 条 (the timestamp took
+              its old place in the foot), and where §9.13 put the write-back request,
+              so both are reachable without opening the card. */}
+          <div className={css.titleRow}>
+            {isEditing('title')
+              ? (
+                  <InlineField
+                    className={`${css.field} ${css.fieldTitle}`}
+                    value={draftOf('title')}
+                    placeholder={t('edit.titlePlaceholder')}
+                    multiline={false}
+                    onChange={draft => { onEdit({ kind: 'field', id: item.id, field: 'title', draft }) }}
+                    onCommit={draft => { onCommit('title', draft) }}
+                    onCancel={onCancel}
+                  />
+                )
+              : (
+                  <button
+                    type="button"
+                    className={css.titleText}
+                    onClick={() => { onEdit({ kind: 'field', id: item.id, field: 'title', draft: item.title }) }}
+                  >
+                    {item.title}
+                  </button>
+                )}
+            {onFill !== undefined && (
+              <button
+                type="button"
+                className={css.sendBtn}
+                title={t('card.fillTitle')}
+                aria-label={t('card.fillTitle')}
+                onClick={onFill}
+              >
+                <SendGlyph />
+              </button>
+            )}
+            {/* §9.13: the write-back request ends this row — the send control moved
+                left to make room for it. Drawn for every item that is not `done`:
+                completion is irreversible and leaves no edge to take (§4.5), so a
+                finished card has nothing to offer here, and `card.statusHint` on
+                the status glyph already says the status moves on its own. Which of
+                the two live states it is in is carried by the tint, so the retry
+                reads differently without the row growing a label. Living here
+                rather than in the expanded area is what makes it reachable without
+                opening the card; the heading line is also the only row that always
+                exists.
+
+                §9.19 made the click two things instead of one, so the control
+                carries a third state: sent and waiting. It is drawn the same way —
+                the tint changes, the row does not grow — and it is `disabled`,
+                because a second request while one is in flight would ask the model
+                for the same summary twice (§11.4). */}
+            {item.status !== 'done' && (
+              <button
+                type="button"
+                className={pending
+                  ? `${css.writeBack} ${css.writeBackPending}`
+                  : item.status === 'in_progress' ? `${css.writeBack} ${css.writeBackBusy}` : css.writeBack}
+                title={t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request')}
+                aria-label={t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request')}
+                disabled={pending}
+                onClick={onRequestComplete}
+              >
+                <MagnifierGlyph />
+              </button>
+            )}
+          </div>
+
+          {isEditing('desc')
+            ? (
+                <InlineField
+                  className={`${css.field} ${css.fieldDesc}`}
+                  value={draftOf('desc')}
+                  placeholder={t('card.noDescription')}
+                  multiline
+                  onChange={draft => { onEdit({ kind: 'field', id: item.id, field: 'desc', draft }) }}
+                  onCommit={draft => { onCommit('desc', draft) }}
+                  onCancel={onCancel}
+                />
+              )
+            : (
+                <button
+                  type="button"
+                  className={item.desc === '' ? `${css.descText} ${css.descEmpty}` : css.descText}
+                  onClick={() => { onEdit({ kind: 'field', id: item.id, field: 'desc', draft: item.desc }) }}
+                >
+                  {item.desc === '' ? t('card.noDescription') : item.desc}
+                </button>
+              )}
+
+          {/* The foot, as in the prototype: what is neither heading nor
+              description, with the disclosure at its far end. */}
+          <div className={css.metaRow}>
+            {isEditing('tag')
+              ? (
+                  <InlineField
+                    className={`${css.field} ${css.fieldTag}`}
+                    value={draftOf('tag')}
+                    placeholder={t('card.noTag')}
+                    multiline={false}
+                    onChange={draft => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft }) }}
+                    onCommit={draft => { onCommit('tag', draft) }}
+                    onCancel={onCancel}
+                  />
+                )
+              : (
+                  <button
+                    type="button"
+                    className={item.tag === '' ? `${css.tag} ${css.tagEmpty}` : css.tag}
+                    onClick={() => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft: item.tag }) }}
+                  >
+                    {item.tag === '' ? t('card.noTag') : item.tag}
+                  </button>
+                )}
+            {/* An item that has not started says nothing here: the ring already
+                reads as "open", and a word beside it would only repeat it. */}
+            {item.status !== 'open' && (
+              <span className={css.statusWord}>
+                <span
+                  className={item.status === 'done' ? `${css.dot} ${css.dotDone}` : `${css.dot} ${css.dotInProgress}`}
+                />
+                {item.status === 'done' ? t('card.status.done') : t('card.status.in_progress')}
+              </span>
+            )}
+            {item.archived && <span className={css.archivedBadge}>{t('card.archived')}</span>}
+            <span className={css.metaSpacer} />
+            {/* The timestamp closed the heading line until the send control took that
+                edge; it reads better here — beside the tag and the status word it is
+                one more fact about the item rather than part of its heading. */}
+            <span className={css.time}>{relative(item.updateAt, t('card.justNow'))}</span>
+            {/* The foot's one remaining control: disclose the item. Delete is not
+                here either — it lives at the end of the expanded area, so a
+                destructive control is never one stray click away on a closed card. */}
+            <span className={css.cardActions}>
+              <button
+                type="button"
+                className={open ? `${css.chevron} ${css.chevronOpen}` : css.chevron}
+                title={open ? t('card.collapse') : t('card.expand')}
+                aria-label={open ? t('card.collapse') : t('card.expand')}
+                aria-expanded={open}
+                onClick={onToggle}
+              >
+                <ChevronGlyph />
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* The region is always mounted so its height can be transitioned (§9.18): the
+          fold is a `grid-template-rows` 0fr -> 1fr, and a collapsed card keeps the
+          content out of the tab order through `visibility`, not by unmounting it. */}
+      <div className={open ? `${css.detailWrap} ${css.detailOpen}` : css.detailWrap}>
+          <div className={css.detail}>
+            {/* The expanded area's one rule, and it is labelled (§5.4). It is drawn
+                whether or not a summary exists, so the section keeps its name and the
+                line does not appear and disappear with the content behind it. */}
+            <div className={css.completionDivider}>{t('completion.title')}</div>
+            {item.completion === undefined
+              ? <p className={css.detailEmpty}>{t('detail.noCompletion')}</p>
+              : <Completion item={item} t={t} />}
+            {/* §9.19: the write-back's next step, in the control's own words. It
+                is drawn while the write-back is still pending, while it is queued
+                and while it is running — but no longer for a finished card
+                (§9.25): its status word and completion record already say
+                everything that narration would repeat. */}
+            {item.status !== 'done' && (
+              <p className={css.detailHint}>
+                {t(pending
+                  ? 'writeback.pending'
+                  : item.status === 'in_progress' ? 'writeback.hintRunning' : 'writeback.hintQueued')}
+              </p>
+            )}
+            {/* The prototype's `.detailBar` keeps only its trailing control now: the
+                write-back request moved up to the heading line (§9.13), which leaves
+                the open card's bottom-right corner to delete — where the prototype
+                puts it, and where a destructive control belongs, since reaching it
+                still takes opening the card and a confirmation on top. */}
+            <div className={css.detailBar}>
+              <button
+                type="button"
+                className={css.detailDelete}
+                title={t('action.delete')}
+                aria-label={t('action.delete')}
+                onClick={onDelete}
+              >
+                <TrashGlyph />
+              </button>
+            </div>
+          </div>
+
+      </div>
+    </li>
+  )
+}
+
+/** The structured write-back summary, once one exists. */
+function Completion({ item, t }: { readonly item: WorkItemRecord; readonly t: CardProps['t'] }): ReactNode {
+  const completion = item.completion
+  if (completion === undefined) return null
+  return (
+    <>
+      {/* The labelled divider above already names this section, and no second rule
+          is drawn between the two (at most one rule in the expanded area, §5.4). */}
+      <p className={css.completionSummary}>{completion.summary}</p>
+
+      <div className={css.completionBlock}>
+        <p className={css.completionBlockTitle}>{t('completion.implementationPath')}</p>
+        <ol className={css.completionSteps}>
+          {completion.implementationPath.map((step, index) => (
+            <li key={`${String(index)}:${step}`}>{step}</li>
+          ))}
+        </ol>
+      </div>
+
+      {completion.changedFiles.length > 0 && (
+        <div className={css.completionBlock}>
+          <p className={css.completionBlockTitle}>{t('completion.changedFiles')}</p>
+          <ul className={css.completionList}>
+            {completion.changedFiles.map(file => (
+              <li key={file.path} className={css.completionRow}>
+                <span className={css.filePath}>{file.path}</span>
+                <span className={css.filePurpose}>{file.purpose}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {completion.verification.length > 0 && (
+        <div className={css.completionBlock}>
+          <p className={css.completionBlockTitle}>{t('completion.verification')}</p>
+          <ul className={css.completionList}>
+            {completion.verification.map(entry => (
+              <li key={entry.command} className={css.completionRow}>
+                <span className={css.verifyCmd}>{entry.command}</span>
+                <span className={`${css.verifyResult} ${
+                  entry.result === 'passed' ? css.verifyPassed : entry.result === 'failed' ? css.verifyFailed : css.verifySkipped
+                }`}
+                >
+                  {t(`verify.${entry.result}` as WorkbenchLocaleKey)}
+                </span>
+                {entry.note !== undefined && entry.note !== '' && (
+                  <span className={css.filePurpose}>{entry.note}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* The writer stamp only earns its line when it says something a status
+          word cannot: a model write-back is what `done` already means (§9.25),
+          so the record from the model shows no stamp at all. */}
+      {completion.completedBy !== 'model' && (
+        <p className={css.completionBy}>
+          {t('completion.by', { who: t(`writer.${completion.completedBy}` as WorkbenchLocaleKey) })}
+        </p>
+      )}
+    </>
+  )
+}
+
+/** Props for one inline edit field. */
+interface InlineFieldProps {
+  /**
+   * Composed class names. `string | undefined` rather than `string` because the
+   * CSS-module import is an open `Record` read under `noUncheckedIndexedAccess`,
+   * so every lookup is nullable — matching React's own `className`, which
+   * accepts undefined.
+   */
+  readonly className: string | undefined
+  readonly value: string
+  readonly placeholder: string
+  readonly multiline: boolean
+  readonly onChange: (draft: string) => void
+  readonly onCommit: (draft: string) => void
+  readonly onCancel: () => void
+}
+
+/**
+ * A field that is always in edit state: it autofocuses, commits on blur, and
+ * reverts on Escape.
+ *
+ * Blur commits rather than reverts because clicking a different field is the
+ * ordinary way to finish with this one; making that lose the edit would punish
+ * the common gesture. Escape is the deliberate undo.
+ *
+ * The box belongs to the caller's field class, which restates the metrics of the
+ * text it replaces — clicking a title, a description or a tag must not move
+ * anything (§9.14). The description is the one field whose box is
+ * content-dependent, so it is measured here: the display clamps it to two lines,
+ * and the field grows to those two lines and scrolls inside them, which keeps the
+ * card exactly as tall before, during and after the edit.
+ *
+ * The placeholder is the caller's too, and for a description or a tag it is the
+ * display state's own empty word (`card.noDescription` / `card.noTag`): an empty
+ * field whose placeholder differed from what it replaced would trade a height
+ * jump for a text jump.
+ */
+const DESC_LINE_HEIGHT = 18
+const DESC_MAX_LINES = 2
+
+function InlineField({ className, value, placeholder, multiline, onChange, onCommit, onCancel }: InlineFieldProps): ReactNode {
+  const ref = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
+  const done = useRef(false)
+
+  useEffect(() => {
+    const node = ref.current
+    if (node === null) return
+    node.focus()
+    node.setSelectionRange(node.value.length, node.value.length)
+  }, [])
+
+  /**
+   * `rows={1}` in the render below is load-bearing here: `scrollHeight` never
+   * reports less than the element's own height, so the browser's default two rows
+   * would pin a one-line description at two lines and the field would jump on
+   * every click. Measuring before paint keeps that from being visible.
+   */
+  useLayoutEffect(() => {
+    const node = ref.current
+    if (node === null || !multiline) return
+    const cap = DESC_LINE_HEIGHT * DESC_MAX_LINES
+    node.style.height = 'auto'
+    node.style.height = `${Math.max(DESC_LINE_HEIGHT, Math.min(cap, node.scrollHeight))}px`
+  }, [multiline, value])
+
+  const finish = (commit: boolean): void => {
+    if (done.current) return
+    done.current = true
+    if (commit) onCommit(value)
+    else onCancel()
+  }
+
+  const shared = {
+    className,
+    value,
+    placeholder,
+    ref: ref as never,
+    onChange: (event: { target: { value: string } }) => { onChange(event.target.value) },
+    onBlur: () => { finish(true) },
+    onKeyDown: (event: { key: string; shiftKey: boolean; preventDefault: () => void }) => {
+      if (event.key === 'Escape') { event.preventDefault(); finish(false); return }
+      if (event.key === 'Enter' && (!multiline || event.shiftKey)) { event.preventDefault(); finish(true) }
+    },
+  }
+
+  return multiline
+    ? <textarea {...shared} rows={1} />
+    : <input {...shared} type="text" />
+}
+
+/** The new-item card: one field, because Enter means "commit this field" here too. */
+function Composer({ t, onCommit, onCancel }: {
+  readonly t: CardProps['t']
+  readonly onCommit: (title: string) => void
+  readonly onCancel: () => void
+}): ReactNode {
+  const [title, setTitle] = useState('')
+  return (
+    <>
+      <InlineField
+        className={`${css.field} ${css.fieldTitle}`}
+        value={title}
+        placeholder={t('edit.titlePlaceholder')}
+        multiline={false}
+        onChange={setTitle}
+        onCommit={onCommit}
+        onCancel={onCancel}
+      />
+      <p className={css.editHint}>{t('edit.hint')}</p>
+    </>
+  )
+}
+
+/** Props the title slot delivers; the chip is the plugin's label. */
+export type WorkbenchTabTitleProps = InjectFace<WorkbenchInjected> & PropsLocale<'workbench'>
+
+/** Render the workbench tab's chip title: a checklist glyph before the label. */
+export function WorkbenchTabTitle(props: WorkbenchTabTitleProps): ReactNode {
+  return (
+    <>
+      <ChecklistGlyph className={css.titleIcon} />
+      {props.t('tab.title')}
+    </>
+  )
+}
+
+function ChecklistGlyph({ className }: { className?: string | undefined }): ReactNode {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="2" y="2.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <rect x="2" y="9.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M8.5 4.5h5.5M8.5 11.5h5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SearchGlyph(): ReactNode {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M10.5 10.5 14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function PlusGlyph(): ReactNode {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M8 3.2v9.6M3.2 8h9.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ChevronGlyph(): ReactNode {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="m6.5 3.5 4.5 4.5-4.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/*
+ * The two controls at the end of a card's title row use the icon set's own
+ * artwork (§9.15), used as supplied: filled paths in a 1024 box instead of the
+ * hand-drawn 16 box the rest of this file uses, so their weight is a property of
+ * the drawing rather than of a `stroke-width` chosen here. Nothing is redrawn or
+ * rescaled — only `fill` is bound to `currentColor`, so the tab's own ink still
+ * applies and the `in_progress` brand tint keeps working.
+ */
+
+/**
+ * Send: the icon set's paper plane.
+ *
+ * Its nose points up-right, the opposite of the hand-drawn plane this replaced:
+ * that one flew left because this pane sits on the right of the window and the
+ * item travels towards the conversation. That reading (§9.11 item 3) is the one
+ * thing this swap gives up, and §9.15 records it as a deliberate trade — the
+ * direction belongs to the artwork the user picked. Mirroring it back is a
+ * `scaleX(-1)` on this `<svg>` whenever it is wanted.
+ */
+function SendGlyph(): ReactNode {
+  return (
+    <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true">
+      <path
+        d="M826.709333 142.336a32 32 0 0 1 46.72 32.128l-78.293333 656.981333a32 32 0 0 1-44.672 25.472l-202.069333-89.130666-106.965334 108.074666a32 32 0 0 1-54.442666-18.133333L386.688 853.333333v-158.805333l-250.453333-131.669333a32 32 0 0 1-4.053334-54.144l4.010667-2.474667z m-28.629333 123.434667l-342.186667 429.397333a32.085333 32.085333 0 0 1-5.12 5.12l-0.085333 75.221333 67.712-68.394666a32 32 0 0 1 31.018667-8.405334l4.650666 1.664 182.613334 80.512 61.397333-515.114666z m-91.562667 12.202666L219.818667 534.485333l198.912 104.618667 287.786666-361.130667z"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Write-back: the icon set's magnifier, whose lens carries a rising trend line —
+ * the shape §9.13 chose, because a summary is a read rather than a measurement
+ * and the line says which kind of looking, now in the set's own drawing.
+ */
+function MagnifierGlyph(): ReactNode {
+  return (
+    <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true">
+      <path
+        d="M515.555556 92.444444c229.745778 0 416 186.254222 416 416S745.301333 924.444444 515.555556 924.444444 99.555556 738.190222 99.555556 508.444444 285.809778 92.444444 515.555556 92.444444z m0 71.111112C325.077333 163.555556 170.666667 317.966222 170.666667 508.444444S325.077333 853.333333 515.555556 853.333333 860.444444 698.922667 860.444444 508.444444 706.033778 163.555556 515.555556 163.555556z"
+      />
+      <path
+        d="M757.077333 757.077333a35.555556 35.555556 0 0 1 48.995556-1.223111l1.28 1.223111 142.222222 142.222223a35.555556 35.555556 0 0 1-48.981333 51.512888l-1.28-1.223111-142.222222-142.222222a35.555556 35.555556 0 0 1 0-50.289778z"
+      />
+      <path
+        d="M416.540444 453.262222a42.666667 42.666667 0 0 1 66.062223-15.104l1.706666 1.493334 81.265778 75.093333 86.983111-172.885333a35.555556 35.555556 0 0 1 46.364445-16.440889l1.379555 0.654222a35.555556 35.555556 0 0 1 16.440889 46.364444l-0.654222 1.379556-103.950222 206.606222a42.666667 42.666667 0 0 1-65.863111 13.226667l-1.194667-1.052445-80.170667-74.055111-72.675555 159.203556a35.555556 35.555556 0 0 1-45.696 18.204444l-1.422223-0.625778a35.555556 35.555556 0 0 1-18.176-45.681777l0.611556-1.422223 88.988444-194.944z"
+      />
+    </svg>
+  )
+}
+
+/** Delete: a lidded bin, drawn at the fill glyph's weight so the pair matches. */
+function TrashGlyph(): ReactNode {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M2.8 4.4h10.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M6.4 4.4V3.1a.7.7 0 0 1 .7-.7h1.8a.7.7 0 0 1 .7.7v1.3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4.3 4.4l.5 7.8a1.5 1.5 0 0 0 1.5 1.4h3.4a1.5 1.5 0 0 0 1.5-1.4l.5-7.8"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M6.7 6.9v3.9M9.3 6.9v3.9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/**
+ * The status ring that opens every card.
+ *
+ * A plain 15px circle, with a check once the item is done — the prototype's
+ * `.glyph`, and deliberately binary: "in progress" is not a third ring, it is
+ * said in words in the card's foot. Colour comes from the slot (`.glyph`), so
+ * the same drawing serves open, composing and finished.
+ * @param props - `done` draws the check.
+ */
+function StatusGlyph({ done = false }: { readonly done?: boolean | undefined }): ReactNode {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.3" stroke="currentColor" strokeWidth="1.3" />
+      {done && (
+        <path
+          d="M5.3 8.2l1.9 1.9 3.5-3.7"
+          stroke="currentColor"
+          strokeWidth="1.45"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+    </svg>
+  )
+}
+
+/** The empty state's mark: a sheet with a line of text, above the sentence. */
+function EmptyGlyph(): ReactNode {
+  return (
+    <svg className={css.emptyGlyph} width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="4.5" width="18" height="15" rx="4" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M3 9.5h18M7.5 14h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export type { WorkbenchSnapshot, WorkbenchFilterTier }

@@ -1,0 +1,109 @@
+{
+  "name": "dsh-plugin-workbench",
+  "version": "0.1.1",
+  "description": "Workspace work-item workbench in the DSH right Sidebar: per-workspace todos with fuzzy search, desc writes, and model write-back",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-rc.2 <0.3.0"
+  },
+  "main": "packages/workbench/lib/index.js",
+  "types": "packages/workbench/lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./packages/workbench/lib/types/index.d.ts",
+      "default": "./packages/workbench/lib/index.js"
+    },
+    "./client": {
+      "types": "./packages/workbench/lib/types/client/index.d.ts",
+      "default": "./packages/workbench/lib/client.js"
+    },
+    "./types": {
+      "types": "./packages/workbench/lib/types/types.d.ts",
+      "default": "./packages/workbench/lib/types/types.js"
+    },
+    "./typert": {
+      "types": "./packages/workbench/lib/types/typert.host.d.ts",
+      "default": "./packages/workbench/lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./packages/workbench/lib/types/typert.remote-client.d.ts",
+      "default": "./packages/workbench/lib/typert.remote-client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "packages/workbench/lib/*.js",
+    "packages/workbench/lib/*.js.map",
+    "packages/workbench/lib/types/**/*.js",
+    "packages/workbench/lib/types/**/*.d.ts",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": [
+        "./cordis.patch.yml"
+      ]
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-api-workspace-controller",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build:host": "tsc -b tsconfig.host.json && tsdown --config tsdown.config.ts",
+    "build:client": "tsc -b tsconfig.client.json && tsdown --config tsdown.client.config.ts",
+    "build": "pnpm build:host && pnpm build:client",
+    "prepare": "tsc -b tsconfig.host.json && tsdown --config tsdown.config.ts && tsc -b tsconfig.client.json && tsdown --config tsdown.client.config.ts",
+    "typecheck": "tsc -b tsconfig.host.json && tsc -b tsconfig.client.json",
+    "test": "pnpm build && node --test packages/workbench/tests/field-metrics.spec.ts packages/workbench/tests/motion.spec.ts packages/workbench/tests/fuzzy.spec.ts packages/workbench/tests/host-search.spec.ts packages/workbench/tests/host-write.spec.ts packages/workbench/tests/remote-contract.spec.ts packages/workbench/tests/seed.spec.ts packages/workbench/tests/completion.spec.ts packages/workbench/tests/write-back.spec.ts packages/workbench/tests/card-time.spec.ts packages/workbench/tests/state.spec.ts packages/workbench/tests/tab-guardian.spec.ts packages/workbench/tests/workspace-source.spec.ts packages/workbench/tests/snapshot-identity.spec.ts",
+    "clean": "node --eval \"for (const p of ['packages/workbench/lib']) require('node:fs').rmSync(p, { recursive: true, force: true })\""
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-api-workspace-controller": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-storage-domain": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-workspace": "0.2.1-rc.2"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-api-remotes": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-api-workspace-controller": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-session": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-sidebar-right": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-workspace": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-storage-domain": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-typert-generator": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-workspace": "0.2.1-rc.2",
+    "@types/node": "^22.20.0",
+    "@types/react": "~18.3.1",
+    "lightningcss": "^1.32.0",
+    "react": "^18.2.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3"
+  }
+}

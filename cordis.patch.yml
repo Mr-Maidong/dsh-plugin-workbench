@@ -1,0 +1,17 @@
+# Patch layer for dsh-plugin-workbench, declared by `dsh.bundle.patch` and applied
+# when a profile lists `dsh-plugin-workbench` in `dsh.profile.bundles`.
+#
+# One row is the whole plugin. A row whose package declares `dsh.client` is
+# simultaneously a Host row and a browser roster row: the modules node half
+# scans Loader entries for packages declaring `dsh.client` and registers that
+# package's `./client` export under the row's package name. The inserted row
+# therefore mounts the `workbench` service and the right-Sidebar tab together.
+#
+# The row is inserted rather than id-targeted because an id patch cannot point
+# an existing row at a different package: a patch `name` asserts the target's
+# plugin name instead of renaming it, and a patch that matches no row is
+# skipped with a warning. Nothing is disabled: this row only contributes a tab
+# type of its own, and disables no existing row or slot.
+- insert:
+    - id: workbench
+      name: dsh-plugin-workbench

@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>工作台 · 右侧边栏原型 v2</title>
+<style>
+/* ──────────────────────────────────────────────────────────────────────────
+   主题令牌。真实插件里全部由 dsh-client-ui-theme 注入；
+   此处给浅/深两套回退值，让原型脱离 DSH 也能独立打开审阅。
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --dsw-alias-bg-base: #ffffff;
+  --dsw-alias-bg-layer-1: #f6f6f7;
+  --dsw-alias-bg-layer-2: #ededf0;
+  --dsw-specific-sidebar-fill: #fafafb;
+  --dsw-alias-border-l1: rgba(0,0,0,.055);
+  --dsw-alias-border-l2: rgba(0,0,0,.09);
+  --dsw-alias-border-l3: rgba(0,0,0,.13);
+  --dsw-alias-label-primary: #17171a;
+  --dsw-alias-label-secondary: #4d4d55;
+  --dsw-alias-label-tertiary: #7e7e88;
+  --dsw-alias-label-caption: #a4a4ae;
+  --dsw-alias-interactive-bg-hover: rgba(0,0,0,.045);
+  --dsw-alias-brand-primary: #2b6cf5;
+  --dsw-alias-state-business-primary: #2b6cf5;
+  --dsw-alias-state-success-primary: #12a05c;
+  --dsw-alias-state-warn-primary: #c07a06;
+  --dsw-alias-state-error-primary: #d93b3b;
+  --dsw-alias-state-idle-primary: #8e8e98;
+  --dsh-focus-ring-color: #2b6cf5;
+  --card-shadow: 0 1px 2px rgba(0,0,0,.05), 0 0 0 .5px rgba(0,0,0,.04);
+  --card-shadow-hover: 0 3px 10px rgba(0,0,0,.08), 0 0 0 .5px rgba(0,0,0,.05);
+}
+[data-theme="dark"] {
+  --dsw-alias-bg-base: #1c1c1f;
+  --dsw-alias-bg-layer-1: #242429;
+  --dsw-alias-bg-layer-2: #161618;
+  --dsw-specific-sidebar-fill: #1f1f23;
+  --dsw-alias-border-l1: rgba(255,255,255,.055);
+  --dsw-alias-border-l2: rgba(255,255,255,.09);
+  --dsw-alias-border-l3: rgba(255,255,255,.14);
+  --dsw-alias-label-primary: #f0f0f3;
+  --dsw-alias-label-secondary: #ababb5;
+  --dsw-alias-label-tertiary: #7f7f8b;
+  --dsw-alias-label-caption: #61616d;
+  --dsw-alias-interactive-bg-hover: rgba(255,255,255,.06);
+  --dsw-alias-brand-primary: #5b8cff;
+  --dsw-alias-state-business-primary: #5b8cff;
+  --dsw-alias-state-success-primary: #32c07a;
+  --dsw-alias-state-warn-primary: #e0a03a;
+  --dsw-alias-state-error-primary: #ef5f5f;
+  --dsw-alias-state-idle-primary: #7f7f8b;
+  --dsh-focus-ring-color: #5b8cff;
+  --card-shadow: 0 1px 2px rgba(0,0,0,.28), 0 0 0 .5px rgba(255,255,255,.045);
+  --card-shadow-hover: 0 3px 12px rgba(0,0,0,.4), 0 0 0 .5px rgba(255,255,255,.07);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 舞台：左侧模拟主内容区，右侧是真实 400px 右边栏 ───────────────────── */
+.stage {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 22px;
+  min-height: 100%;
+  padding: 30px 24px;
+}
+.window {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  max-width: 1180px;
+  overflow: hidden;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 22px;
+  background: var(--dsw-alias-bg-base);
+  box-shadow: 0 24px 60px rgba(0,0,0,.3);
+}
+.mainPane { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.mainHead {
+  display: flex; align-items: center; gap: 10px;
+  height: 46px; padding: 0 22px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-tertiary); font-size: 13px;
+}
+.mainBody { display: flex; flex: 1; flex-direction: column; gap: 16px; padding: 26px; }
+.ghostLine { height: 12px; border-radius: 8px; background: var(--dsw-alias-bg-layer-1); }
+.ghostLine.w40 { width: 40%; } .ghostLine.w70 { width: 70%; } .ghostLine.w55 { width: 55%; }
+.ghostCard { height: 104px; border-radius: 18px; background: var(--dsw-alias-bg-layer-1); }
+
+/* ── 右边栏 ─────────────────────────────────────────────────────────────── */
+.sidebar {
+  display: flex; flex-direction: column; flex: none;
+  width: 400px; min-width: 0;
+  border-left: 0.5px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-base);
+}
+.paneChrome {
+  display: flex; flex: none; align-items: center; justify-content: space-between;
+  gap: 12px; height: 46px; padding: 0 14px 0 18px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l1);
+}
+.paneTabs { display: flex; align-items: center; gap: 18px; min-width: 0; overflow: hidden; }
+.paneTab {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  height: 28px; padding: 0; border: 0; background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer;
+}
+.paneTab[data-active] { color: var(--dsw-alias-label-primary); }
+.paneActions { display: flex; flex: none; align-items: center; gap: 2px; }
+.iconBtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 9px;
+  background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer;
+}
+.iconBtn:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.iconBtn:focus-visible { outline: 2px solid var(--dsh-focus-ring-color); outline-offset: 1px; }
+
+/* ── 主体 ──────────────────────────────────────────────────────────────── */
+.workbench { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.toolbar { flex: none; padding: 14px 16px 0; }
+
+.searchField {
+  display: flex; align-items: center; gap: 8px;
+  height: 36px; padding: 0 11px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 13px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-tertiary);
+  transition: border-color .15s, background .15s;
+}
+.searchField:focus-within { border-color: var(--dsw-alias-state-business-primary); background: var(--dsw-alias-bg-base); }
+.searchField input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0;
+  background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px;
+}
+.searchField input::placeholder { color: var(--dsw-alias-label-caption); }
+.searchClear {
+  display: none; flex: none; align-items: center; justify-content: center;
+  width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-tertiary); cursor: pointer;
+}
+.searchField[data-filled] .searchClear { display: inline-flex; }
+
+.filterRow { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.filters { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
+/* 新建按钮与筛选同行、贴右；与 chip 同高（28px），圆角沿用 iconBtn */
+.filterRow .iconBtn { flex: none; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  height: 28px; padding: 0 11px; border: 0.5px solid transparent; border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-secondary);
+  font: inherit; font-size: 12.5px; white-space: nowrap; cursor: pointer;
+  transition: background .13s, color .13s;
+}
+.chip:hover { background: var(--dsw-alias-bg-layer-2); }
+.chip[data-active] {
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 15%, transparent);
+  color: var(--dsw-alias-state-business-primary);
+}
+.chip:focus-visible { outline: 2px solid var(--dsh-focus-ring-color); outline-offset: 1px; }
+.chipCount { color: inherit; opacity: .62; font-variant-numeric: tabular-nums; }
+
+/* ── 列表 ───────────────────────────────────────────────────────────────── */
+.listScroll {
+  flex: 1; min-height: 0; overflow: auto;
+  padding: 14px 14px 24px; scrollbar-gutter: stable;
+}
+.groupLabel {
+  display: flex; align-items: center; gap: 8px;
+  margin: 4px 4px 9px; color: var(--dsw-alias-label-caption);
+  font-size: 11.5px; font-weight: 500; letter-spacing: .02em;
+}
+.groupLabel::after { content: ''; flex: 1; height: 0.5px; background: var(--dsw-alias-border-l1); }
+.listRows { display: flex; flex-direction: column; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.listRows + .groupLabel { margin-top: 20px; }
+
+/* ── 卡片：macOS 最新风格，大圆角 + 抬升面 ───────────────────────────────── */
+.card {
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: var(--card-shadow);
+  transition: box-shadow .16s, border-color .16s;
+}
+.card:hover { box-shadow: var(--card-shadow-hover); }
+.card[data-expanded] { border-color: var(--dsw-alias-border-l2); }
+.card[data-done] { opacity: .72; }
+.card[data-composing] { border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 42%, transparent); }
+
+.cardMain { display: flex; align-items: flex-start; gap: 11px; padding: 13px 14px 12px; }
+.glyph { flex: none; display: flex; justify-content: center; width: 17px; margin-top: 2px; }
+.body { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+
+.head { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+
+/* 显示态：纯文本，无边框无背景 */
+.titleText {
+  flex: 1; min-width: 0; margin: 0;
+  font-size: 14px; font-weight: 550; line-height: 21px;
+  letter-spacing: -.005em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: text; border-radius: 6px;
+}
+.titleText:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.card[data-done] .titleText { font-weight: 450; color: var(--dsw-alias-label-tertiary); }
+.time { flex: none; color: var(--dsw-alias-label-caption); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+.descText {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  overflow: hidden; margin: 4px 0 0; border-radius: 6px;
+  color: var(--dsw-alias-label-tertiary); font-size: 12.5px; line-height: 19px;
+  overflow-wrap: anywhere; cursor: text;
+}
+.descText:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.descText[data-empty] { color: var(--dsw-alias-label-caption); font-style: italic; }
+
+.foot { display: flex; align-items: center; gap: 8px; margin-top: 9px; min-width: 0; }
+.tag {
+  display: inline-flex; align-items: center; flex: none;
+  padding: 5px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);
+  color: var(--dsw-alias-brand-primary); font-size: 11.5px; line-height: 15px; cursor: text;
+}
+.tag[data-empty] { background: transparent; border: 0.5px dashed var(--dsw-alias-border-l2); color: var(--dsw-alias-label-caption); cursor: text; }
+.statusWord { display: inline-flex; align-items: center; gap: 5px; color: var(--dsw-alias-label-tertiary); font-size: 11.5px; }
+.dot { flex: none; width: 6px; height: 6px; border-radius: 50%; }
+.dot.in_progress { background: var(--dsw-alias-state-business-primary); }
+.dot.done { background: var(--dsw-alias-state-success-primary); }
+
+/* 归档是正交标记：只加一个低饱和徽标，不像 done 那样整卡降透明度
+   ——归档项仍然可编辑、可写回，视觉上不能暗示「冻结」 */
+.archBadge {
+  display: inline-flex; align-items: center; flex: none;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-tertiary);
+  font-size: 11px; line-height: 15px;
+}
+.card[data-archived] .glyph { opacity: .55; }
+.card[data-archived] { border-style: dashed; }
+.spacer { flex: 1; min-width: 0; }
+.chevron {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; margin: -3px -4px -3px 0; padding: 0;
+  border: 0; border-radius: 8px; background: transparent;
+  color: var(--dsw-alias-label-caption); cursor: pointer;
+}
+.chevron:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); }
+.chevron svg { transition: transform .18s; }
+.card[data-expanded] .chevron svg { transform: rotate(90deg); }
+
+/* 输入态：内凹输入框，与显示态形成明确区别 */
+.field {
+  width: 100%; padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-business-primary) 55%, transparent);
+  border-radius: 11px;
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font: inherit; font-size: 13px; line-height: 19px;
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-business-primary) 16%, transparent);
+}
+input.field.titleField { font-size: 14px; font-weight: 550; height: 33px; }
+textarea.field { min-height: 62px; resize: vertical; overflow: auto; }
+input.field.tagField { width: 108px; height: 28px; padding: 4px 9px; font-size: 12px; border-radius: 999px; }
+.field::placeholder { color: var(--dsw-alias-label-caption); font-weight: 400; font-style: normal; }
+.editHint { margin-top: 6px; color: var(--dsw-alias-label-caption); font-size: 11px; }
+.editHint kbd {
+  padding: 0 4px; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-2); font-family: inherit; font-size: 10.5px;
+}
+
+/* ── 展开区 ─────────────────────────────────────────────────────────────── */
+.detail { padding: 2px 14px 14px 42px; }
+.detailDivider { height: 0.5px; margin: 0 0 12px; background: var(--dsw-alias-border-l1); }
+.detailBar { display: flex; align-items: center; gap: 8px; }
+.detailHint { flex: 1; min-width: 0; color: var(--dsw-alias-label-caption); font-size: 11.5px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: none;
+  height: 30px; padding: 0 13px; border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 999px; background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary); font: inherit; font-size: 12.5px; cursor: pointer;
+  transition: background .13s;
+}
+.btn:hover { background: var(--dsw-alias-bg-layer-2); }
+.btn:focus-visible { outline: 2px solid var(--dsh-focus-ring-color); outline-offset: 1px; }
+.btnPrimary { border-color: transparent; background: var(--dsw-alias-state-business-primary); color: #fff; }
+.btnPrimary:hover { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 86%, #000); }
+.btnQuiet { border-color: transparent; background: transparent; color: var(--dsw-alias-label-tertiary); }
+.btnQuiet:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-state-error-primary); }
+.btn:disabled { opacity: .45; cursor: default; }
+
+/* 写回后的完成记录 */
+.completionDivider {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px; color: var(--dsw-alias-label-caption);
+  font-size: 11px; font-weight: 500; letter-spacing: .02em;
+}
+.completionDivider::before, .completionDivider::after { content: ''; flex: 1; height: 0.5px; background: var(--dsw-alias-border-l1); }
+.completionSummary { margin: 0; font-size: 12.5px; line-height: 20px; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
+.completionBlock { margin-top: 13px; }
+.completionBlockTitle { margin: 0 0 6px; color: var(--dsw-alias-label-caption); font-size: 11px; font-weight: 500; }
+.completionList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.completionList li { display: flex; gap: 7px; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.completionList .k { flex: none; color: var(--dsw-alias-label-caption); }
+.fileRow { display: flex; flex-direction: column; min-width: 0; }
+.filePath { color: var(--dsw-alias-label-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+.filePurpose { color: var(--dsw-alias-label-tertiary); font-size: 11.5px; }
+.verifyRow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.verifyCmd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--dsw-alias-label-secondary); }
+.verifyResult { flex: none; font-size: 10.5px; font-weight: 500; }
+.verifyResult.passed { color: var(--dsw-alias-state-success-primary); }
+.verifyResult.failed { color: var(--dsw-alias-state-error-primary); }
+.verifyResult.skipped { color: var(--dsw-alias-label-caption); }
+.completionBy { margin: 11px 0 0; color: var(--dsw-alias-label-caption); font-size: 11px; }
+
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; text-align: center; }
+.emptyGlyph { margin-bottom: 14px; color: var(--dsw-alias-label-caption); }
+.empty p { margin: 0; font-size: 13px; color: var(--dsw-alias-label-tertiary); }
+.empty .emptyHint { margin-top: 6px; color: var(--dsw-alias-label-caption); font-size: 12px; }
+
+mark { padding: 0 1px; border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 34%, transparent); color: inherit; }
+
+/* ── 确认清单 ───────────────────────────────────────────────────────────── */
+.checklist {
+  flex: none; width: 300px; padding: 18px; align-self: flex-start;
+  border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 20px;
+  background: var(--dsw-alias-bg-base);
+}
+.checklist h2 { margin: 0 0 4px; font-size: 14px; font-weight: 550; }
+.checklistSub { margin: 0 0 15px; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 19px; }
+.checkGroup { margin-bottom: 16px; }
+.checkGroupTitle { margin: 0 0 8px; color: var(--dsw-alias-label-caption); font-size: 11px; font-weight: 500; letter-spacing: .03em; }
+.checkItem { display: flex; gap: 8px; margin-bottom: 8px; color: var(--dsw-alias-label-secondary); font-size: 12.5px; line-height: 19px; }
+.checkItem b { color: var(--dsw-alias-label-primary); font-weight: 550; }
+.checkMark { flex: none; margin-top: 1px; font-size: 11px; }
+.checkMark.done { color: var(--dsw-alias-state-success-primary); }
+.checkMark.ask { color: var(--dsw-alias-state-warn-primary); }
+.themeToggle {
+  display: flex; width: 100%; gap: 4px; padding: 3px;
+  border: 0.5px solid var(--dsw-alias-border-l1); border-radius: 13px; background: var(--dsw-alias-bg-layer-1);
+}
+.themeToggle button {
+  flex: 1; height: 28px; border: 0; border-radius: 10px; background: transparent;
+  color: var(--dsw-alias-label-tertiary); font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.themeToggle button[data-active] { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); box-shadow: var(--card-shadow); }
+
+@media (max-width: 1200px) { .checklist { display: none; } }
+@media (max-width: 1000px) { .sidebar { width: 100%; } .mainPane { display: none; } }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="window">
+    <!-- 左侧仅交代位置 -->
+    <div class="mainPane">
+      <div class="mainHead">
+        <span>对话</span>
+        <span style="color:var(--dsw-alias-label-caption)">· 主内容区（仅交代位置）</span>
+      </div>
+      <div class="mainBody">
+        <div class="ghostLine w40"></div>
+        <div class="ghostCard"></div>
+        <div class="ghostLine w70"></div>
+        <div class="ghostLine w55"></div>
+        <div class="ghostCard"></div>
+      </div>
+    </div>
+
+    <!-- 右边栏 -->
+    <aside class="sidebar">
+      <header class="paneChrome">
+        <div class="paneTabs">
+          <button class="paneTab" data-active>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="2" y="2.5" width="12" height="11" rx="2.6" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M2 6.2h12M5.4 10.4l1.7 1.7 3.5-3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            工作台
+          </button>
+          <button class="paneTab">文件</button>
+          <button class="paneTab">终端</button>
+        </div>
+        <div class="paneActions">
+          <button class="iconBtn" title="更多" aria-label="更多">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="3.4" cy="8" r="1.15" fill="currentColor"/>
+              <circle cx="8" cy="8" r="1.15" fill="currentColor"/>
+              <circle cx="12.6" cy="8" r="1.15" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="workbench">
+        <div class="toolbar">
+          <div class="searchField" id="searchField">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="7.2" cy="7.2" r="4.4" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M10.6 10.6L13.6 13.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <input id="searchInput" type="search" placeholder="搜索标题、描述、标签…" autocomplete="off" />
+            <button class="searchClear" id="searchClear" title="清除" aria-label="清除搜索">
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="filterRow">
+            <div class="filters" id="filters"></div>
+            <button class="iconBtn" id="newBtn" title="新建工作项" aria-label="新建工作项">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M8 3.6v8.8M3.6 8h8.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="listScroll" id="listScroll"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 确认清单 -->
+  <div class="checklist">
+    <h2>原型 v2</h2>
+    <p class="checklistSub">已按你的五条意见重做。可直接点选。</p>
+
+    <div class="checkGroup">
+      <p class="checkGroupTitle">主题</p>
+      <div class="themeToggle" id="themeToggle">
+        <button data-theme="dark" data-active>深色</button>
+        <button data-theme="light">浅色</button>
+      </div>
+    </div>
+
+    <div class="checkGroup">
+      <p class="checkGroupTitle">已定（本轮拍板）</p>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>筛选四档：<b>全部 / 未完成 / 已完成 / 已归档</b></span></div>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>状态<b>不可手动改</b>：写回后自动完结</span></div>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>工作区删除 → 工作项<b>标记归档</b>，不删</span></div>
+      <div class="checkItem"><span class="checkMark done">✓</span><span><b>tag 单值</b>；入口只在<b>右栏独占页签</b></span></div>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>大圆角卡片，显示态纯文本、输入态内凹输入框</span></div>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>去掉保存/还原按钮，失焦即提交</span></div>
+    </div>
+
+    <div class="checkGroup">
+      <p class="checkGroupTitle">本轮新加，请确认</p>
+      <div class="checkItem"><span class="checkMark ask">●</span><span><b>「已归档」档</b>：切过去看两条示例。<b>归档项用虚线边框 + 徽标，不降透明度</b>——因为它仍可编辑、可写回。这样表达「没在工作区了」而不是「冻结了」对吗？</span></div>
+      <div class="checkItem"><span class="checkMark ask">●</span><span><b>「重新写回」</b>：<code>in_progress</code> 的项展开后按钮变为「重新写回」（看第 3 条示例）。点它只重发提示词、<b>不重复置位</b>。符合预期吗？</span></div>
+      <div class="checkItem"><span class="checkMark ask">●</span><span>归档徽标旁要不要显示原工作区路径？目前只在 <code>title</code> 提示里。</span></div>
+    </div>
+
+    <div class="checkGroup">
+      <p class="checkGroupTitle">可试的交互</p>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>点标题、点描述、点标签 → 变成输入框</span></div>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>搜索 <b>插件</b>，或子序列 <b>ck</b></span></div>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>展开「模糊查询打分算法」看写回后的总结</span></div>
+      <div class="checkItem"><span class="checkMark done">✓</span><span>展开未完成项 → 「生成总结并写回」</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict'
+  const $ = id => document.getElementById(id)
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+  const FILTERS = [
+    { id: 'all', label: '全部' },
+    { id: 'active', label: '未完成' },
+    { id: 'done', label: '已完成' },
+    { id: 'archived', label: '已归档' },
+  ]
+
+  const HOUR = 3600e3
+  const NOW = Date.now()
+  const iso = h => new Date(NOW - h * HOUR).toISOString()
+
+  let uid = 100
+  const seed = () => [
+    {
+      id: 'wi-' + (++uid),
+      title: '抽出工作台为独立 dsh 插件',
+      desc: '以 session-inspector 为打包模板，Host 半边放 storageDomain 与模型工具，客户端半边只注册右栏页签，不改动 ui-layout / ui-sidebar。',
+      tag: '插件化',
+      status: 'in_progress',
+      createdAt: iso(52), updateAt: iso(0.4),
+    },
+    {
+      id: 'wi-' + (++uid),
+      title: 'status / desc 写入接口与 CAS 冲突处理',
+      desc: '写入带 expectedUpdateAt 做比较并交换；版本落后时返回 conflict 判别式而不是抛异常，由 UI 提示重新加载。',
+      tag: '接口',
+      status: 'open',
+      createdAt: iso(40), updateAt: iso(3),
+    },
+    {
+      id: 'wi-' + (++uid),
+      title: '右侧边栏页签注册验证',
+      desc: '在未改动的 master 版 DSH 上确认页签能出现——这是「独立安装」的验收线。',
+      tag: '插件化',
+      status: 'open',
+      createdAt: iso(30), updateAt: iso(6),
+    },
+    {
+      id: 'wi-' + (++uid),
+      title: '回写工具 workbench_complete',
+      desc: '模型执行完一轮后把总结写回同一条工作项。落盘为 workbench/item-complete 会话事件，再由投影送达客户端。',
+      tag: '回写',
+      status: 'open',
+      createdAt: iso(22), updateAt: iso(11),
+    },
+    {
+      id: 'wi-' + (++uid),
+      title: '模糊查询打分算法',
+      desc: '三级打分：前缀 > 子串（标题 > 标签 > 描述）> 子序列；多词之间是 AND；按 update_at 倒序。',
+      tag: '查询',
+      status: 'done',
+      createdAt: iso(96), updateAt: iso(20),
+      completion: {
+        summary: '实现三级模糊打分并接入列表与模型工具。打分函数为纯函数：标题前缀 120 分、标题子串 80 分、标签 50 分、描述 30 分、子序列 15 分，多词求和，任一词零分则整条淘汰。',
+        implementationPath: [
+          '在 Host 半边定义 scoreWorkItem(item, words) 纯函数，与存储层解耦',
+          '列表与模型工具共用同一函数，保证排序一致',
+          '暴露 workbench_search 工具，返回 top-N 与总命中数',
+        ],
+        changedFiles: [
+          { path: 'packages/workbench/src/search.ts', purpose: '三级打分与排序' },
+          { path: 'packages/workbench/src/index.ts', purpose: '接入 Remote 与模型工具' },
+          { path: 'packages/workbench/tests/search.spec.ts', purpose: '打分边界用例' },
+        ],
+        verification: [
+          { command: 'pnpm --filter dsh-plugin-workbench test', result: 'passed' },
+          { command: 'pnpm run typecheck', result: 'passed' },
+          { command: 'pnpm run test:gui', result: 'skipped', note: '本轮未改动浏览器渲染' },
+        ],
+        completedAt: iso(20), completedBy: 'model',
+      },
+    },
+    {
+      id: 'wi-' + (++uid),
+      title: '归档：早期需求拆解讨论稿',
+      desc: '已被第 13 节的独立插件化方案取代，保留备查。',
+      tag: '文档',
+      status: 'done',
+      createdAt: iso(160), updateAt: iso(72),
+      completion: {
+        summary: '早期讨论稿，结论已被独立插件化方案取代。',
+        implementationPath: ['整理需求拆解与边界'],
+        changedFiles: [],
+        verification: [],
+        completedAt: iso(72), completedBy: 'user',
+      },
+    },
+    {
+      id: 'wi-' + (++uid),
+      title: '旧版会话投影调研',
+      desc: '归属工作区已从 DSH 中移除；工作项按规则标记归档，仍可编辑与写回。',
+      tag: '调研',
+      status: 'open',
+      archived: true,
+      workspacePath: 'D:/Workbase/legacy-probe',
+      createdAt: iso(500), updateAt: iso(480),
+    },
+    {
+      id: 'wi-' + (++uid),
+      title: '旧工作区的验证脚本补齐',
+      desc: '同为归档项，但已在进行中——归档不阻止写回。',
+      tag: '脚本',
+      status: 'in_progress',
+      archived: true,
+      workspacePath: 'D:/Workbase/legacy-probe',
+      createdAt: iso(460), updateAt: iso(30),
+    },
+  ]
+
+  const state = {
+    items: seed(),
+    query: '',
+    filter: 'all',
+    expandedId: null,
+    editing: null,          // { id, field }
+    composing: false,
+    draft: { title: '', desc: '', tag: '' },
+    focus: null,            // 渲染后要聚焦的元素
+    pending: null,          // 等待写回的工作项 id
+  }
+
+  const isDone = it => it.status === 'done'
+  /* 归档是叠加在 status 之上的正交标记，不是第四个状态 */
+  const isArchived = it => it.archived === true
+  const findItem = id => state.items.find(i => i.id === id)
+  const touch = it => { it.updateAt = new Date().toISOString() }
+
+  /* 子序列匹配：'ck' 命中「插件化」这类跳跃匹配 */
+  function subseq(text, word) {
+    let i = 0
+    for (const ch of text) { if (ch === word[i]) i++; if (i === word.length) return true }
+    return word.length === 0
+  }
+
+  /* 三级打分。与 §4.2 实现一致：多词 AND，任一词零分则整条淘汰 */
+  function scoreItem(item, words) {
+    if (words.length === 0) return 1
+    let total = 0
+    for (const w of words) {
+      const t = item.title.toLowerCase()
+      const d = item.desc.toLowerCase()
+      const g = (item.tag || '').toLowerCase()
+      let s = 0
+      if (t.startsWith(w)) s = 120
+      else if (t.includes(w)) s = 80
+      else if (g.includes(w)) s = 50
+      else if (d.includes(w)) s = 30
+      else if (subseq(t, w)) s = 15
+      else if (subseq(d, w)) s = 8
+      if (s === 0) return 0
+      total += s
+    }
+    return total
+  }
+
+  function highlight(text, words) {
+    if (!words.length) return esc(text)
+    const lower = text.toLowerCase()
+    let hit = -1, len = 0
+    for (const w of words) {
+      const i = lower.indexOf(w)
+      if (i >= 0 && (hit < 0 || i < hit)) { hit = i; len = w.length }
+    }
+    if (hit < 0) return esc(text)
+    return esc(text.slice(0, hit)) + '<mark>' + esc(text.slice(hit, hit + len)) + '</mark>' + esc(text.slice(hit + len))
+  }
+
+  function fmtTime(isoStr) {
+    const diff = Date.now() - new Date(isoStr).getTime()
+    const min = Math.floor(diff / 60e3)
+    if (min < 1) return '刚刚'
+    if (min < 60) return min + ' 分钟前'
+    const h = Math.floor(min / 60)
+    if (h < 24) return h + ' 小时前'
+    const d = Math.floor(h / 24)
+    if (d === 1) return '昨天'
+    if (d < 30) return d + ' 天前'
+    const dt = new Date(isoStr)
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0')
+  }
+
+  function visible() {
+    const words = state.query.toLowerCase().split(/\s+/).filter(Boolean)
+    const rows = []
+    for (const item of state.items) {
+      /* 日常三档都不含归档项；「已归档」档只看归档项 */
+      if (state.filter === 'archived') {
+        if (!isArchived(item)) continue
+      } else if (isArchived(item)) {
+        continue
+      }
+      if (state.filter === 'active' && isDone(item)) continue
+      if (state.filter === 'done' && !isDone(item)) continue
+      const score = scoreItem(item, words)
+      if (score === 0) continue
+      rows.push({ item, score })
+    }
+    rows.sort((a, b) => {
+      if (words.length && a.score !== b.score) return b.score - a.score
+      if (isDone(a.item) !== isDone(b.item)) return isDone(a.item) ? 1 : -1
+      return new Date(b.item.updateAt) - new Date(a.item.updateAt)
+    })
+    return { rows, words }
+  }
+
+  function counts() {
+    let active = 0, done = 0, archived = 0
+    for (const it of state.items) {
+      if (isArchived(it)) archived++
+      else isDone(it) ? done++ : active++
+    }
+    return { all: active + done, active, done, archived }
+  }
+
+  function renderFilters() {
+    const c = counts()
+    $('filters').innerHTML = FILTERS.map(f =>
+      '<button class="chip" data-filter="' + f.id + '"' + (state.filter === f.id ? ' data-active' : '') + '>' +
+      f.label + '<span class="chipCount">' + c[f.id] + '</span></button>').join('')
+  }
+
+  /* ── 字段：显示态 ⇄ 输入态 ───────────────────────────────────────────── */
+
+  const editing = (item, field) => state.editing && state.editing.id === item.id && state.editing.field === field
+
+  function titleCell(item, words) {
+    if (editing(item, 'title')) {
+      return '<input class="field titleField" data-edit="title" value="' + esc(item.title) + '" placeholder="这条工作项要做什么" />'
+    }
+    return '<span class="titleText" data-start="title" title="点击编辑">' + highlight(item.title, words) + '</span>'
+  }
+
+  function descCell(item, words) {
+    if (editing(item, 'desc')) {
+      const rows = Math.min(8, Math.max(3, Math.ceil((item.desc.length + 1) / 34)))
+      return '<textarea class="field" data-edit="desc" rows="' + rows + '" placeholder="要做什么、验收标准是什么…">' + esc(item.desc) + '</textarea>' +
+        '<span class="editHint">失焦提交 · <kbd>Esc</kbd> 放弃</span>'
+    }
+    return item.desc
+      ? '<span class="descText" data-start="desc" title="点击编辑">' + highlight(item.desc, words) + '</span>'
+      : '<span class="descText" data-start="desc" data-empty title="点击添加描述">添加描述…</span>'
+  }
+
+  function tagCell(item, words) {
+    if (editing(item, 'tag')) {
+      return '<input class="field tagField" data-edit="tag" value="' + esc(item.tag || '') + '" placeholder="标签" />'
+    }
+    return item.tag
+      ? '<span class="tag" data-start="tag" title="点击编辑标签">' + highlight(item.tag, words) + '</span>'
+      : '<span class="tag" data-start="tag" data-empty title="点击添加标签">+ 标签</span>'
+  }
+
+  function completionBlock(item) {
+    const cm = item.completion
+    if (!cm) return ''
+    const steps = cm.implementationPath.map(s => '<li><span class="k">·</span><span>' + esc(s) + '</span></li>').join('')
+    const files = cm.changedFiles.map(f =>
+      '<li><span class="k">·</span><span class="fileRow"><span class="filePath">' + esc(f.path) + '</span>' +
+      '<span class="filePurpose">' + esc(f.purpose) + '</span></span></li>').join('')
+    const verify = cm.verification.map(v =>
+      '<li><span class="k">$</span><span class="verifyRow"><span class="verifyCmd">' + esc(v.command) + '</span>' +
+      '<span class="verifyResult ' + v.result + '">' + (v.result === 'passed' ? '通过' : v.result === 'failed' ? '失败' : '跳过') + '</span></span></li>' +
+      (v.note ? '<li><span class="k"></span><span class="filePurpose">' + esc(v.note) + '</span></li>' : '')).join('')
+    return '<div class="completion">' +
+      '<div class="completionDivider">执行总结</div>' +
+      '<p class="completionSummary">' + esc(cm.summary) + '</p>' +
+      (steps ? '<div class="completionBlock"><p class="completionBlockTitle">实现路径</p><ul class="completionList">' + steps + '</ul></div>' : '') +
+      (files ? '<div class="completionBlock"><p class="completionBlockTitle">修改文件</p><ul class="completionList">' + files + '</ul></div>' : '') +
+      (verify ? '<div class="completionBlock"><p class="completionBlockTitle">验证结果</p><ul class="completionList">' + verify + '</ul></div>' : '') +
+      '<p class="completionBy">' + (cm.completedBy === 'model' ? '由模型写回' : '由我手动完成') + ' · ' + fmtTime(cm.completedAt) + '</p>' +
+    '</div>'
+  }
+
+  function detailBlock(item) {
+    const waiting = state.pending === item.id
+    const inProgress = item.status === 'in_progress'
+    /* in_progress 也保留写回按钮：上一轮可能没调工具，用户要能再推一次（重试边） */
+    const writeBack = isDone(item)
+      ? ''
+      : waiting
+        ? '<button class="btn" disabled>已发送，等待模型写回…</button>'
+        : '<button class="btn btnPrimary" data-act="writeback">' +
+          (inProgress ? '重新写回' : '生成总结并写回') + '</button>'
+    const hint = isDone(item)
+      ? '<span class="detailHint">已完成 · 状态由写回自动更新</span>'
+      : inProgress
+        ? '<span class="detailHint">进行中 · 可再次写回</span>'
+        : '<span class="detailHint">写回后本条自动完结</span>'
+    /* 有执行总结时不再画自己的分隔线：completionDivider 已经承担了这个职责 */
+    const divider = item.completion ? '' : '<div class="detailDivider"></div>'
+    return '<div class="detail">' + divider +
+      completionBlock(item) +
+      '<div class="detailBar" style="margin-top:' + (item.completion ? '14px' : '0') + '">' + hint + writeBack +
+      '<button class="btn btnQuiet" data-act="delete">删除</button></div>' +
+    '</div>'
+  }
+
+  function statusWord(item) {
+    if (isDone(item)) return '<span class="statusWord"><span class="dot done"></span>已完成</span>'
+    if (state.pending === item.id) return '<span class="statusWord"><span class="dot in_progress"></span>进行中</span>'
+    if (item.status === 'in_progress') return '<span class="statusWord"><span class="dot in_progress"></span>进行中</span>'
+    return ''
+  }
+
+  /* 归档徽标：工作区已被删除，但仍可编辑、可写回 */
+  function archivedBadge(item) {
+    return isArchived(item)
+      ? '<span class="archBadge" title="归属工作区已删除 · ' + (item.workspacePath || '未知路径') + '">已归档</span>'
+      : ''
+  }
+
+  function renderCard(item, words) {
+    const expanded = state.expandedId === item.id
+    const glyph = isDone(item)
+      ? '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-success-primary)"/><path d="M5.3 8.2l1.9 1.9 3.5-3.7" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dsw-alias-state-success-primary)"/></svg>'
+      : '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg>'
+    return '<li class="card" data-id="' + item.id + '"' +
+      (expanded ? ' data-expanded' : '') + (isDone(item) ? ' data-done' : '') +
+      (isArchived(item) ? ' data-archived' : '') + '>' +
+      '<div class="cardMain">' +
+        '<span class="glyph" title="状态由写回自动更新">' + glyph + '</span>' +
+        '<div class="body">' +
+          '<div class="head">' + titleCell(item, words) + '<span class="time">' + fmtTime(item.updateAt) + '</span></div>' +
+          descCell(item, words) +
+          '<div class="foot">' + tagCell(item, words) + statusWord(item) + archivedBadge(item) +
+            '<span class="spacer"></span>' +
+            '<button class="chevron" data-act="toggle" title="展开" aria-label="展开" aria-expanded="' + expanded + '">' +
+              '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.4 2.4L8 6l-3.6 3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      (expanded ? detailBlock(item) : '') +
+    '</li>'
+  }
+
+  function composerCard() {
+    const d = state.draft
+    const rows = Math.min(8, Math.max(3, Math.ceil((d.desc.length + 1) / 34)))
+    return '<li class="card" data-composing>' +
+      '<div class="cardMain">' +
+        '<span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-business-primary)"/></svg></span>' +
+        '<div class="body">' +
+          '<input class="field titleField" data-draft="title" value="' + esc(d.title) + '" placeholder="这条工作项要做什么" />' +
+          '<div style="height:7px"></div>' +
+          '<textarea class="field" data-draft="desc" rows="' + rows + '" placeholder="要做什么、验收标准是什么…">' + esc(d.desc) + '</textarea>' +
+          '<div style="height:7px"></div>' +
+          '<div class="foot">' +
+            '<input class="field tagField" data-draft="tag" value="' + esc(d.tag) + '" placeholder="标签" />' +
+            '<span class="spacer"></span>' +
+            '<button class="btn btnQuiet" data-act="cancel-new">取消</button>' +
+            '<button class="btn btnPrimary" data-act="create">创建</button>' +
+          '</div>' +
+          '<span class="editHint">创建后为「未完成」· <kbd>Enter</kbd> 创建 · <kbd>Esc</kbd> 取消</span>' +
+        '</div>' +
+      '</div>' +
+    '</li>'
+  }
+
+  function render() {
+    renderFilters()
+    const { rows, words } = visible()
+    $('searchField').toggleAttribute('data-filled', state.query !== '')
+    if ($('searchInput').value !== state.query) $('searchInput').value = state.query
+
+    const active = rows.filter(r => !isDone(r.item))
+    const done = rows.filter(r => isDone(r.item))
+
+    if (!rows.length && !state.composing) {
+      const searching = state.query !== '' || state.filter !== 'all'
+      const emptyTitle = state.filter === 'archived' ? '没有归档的工作项' : (searching ? '没有匹配的工作项' : '这个工作区还没有工作项')
+      const emptyHint = state.filter === 'archived'
+        ? '工作区被删除时，它的工作项会移到这里'
+        : (searching ? '换个关键词，或切回「全部」' : '点筛选行右侧「+」新建一条')
+      $('listScroll').innerHTML = '<div class="empty">' +
+        '<svg class="emptyGlyph" width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="15" rx="4" stroke="currentColor" stroke-width="1.3"/><path d="M3 9.5h18M7.5 14h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
+        '<p>' + emptyTitle + '</p>' +
+        '<p class="emptyHint">' + emptyHint + '</p></div>'
+      return
+    }
+
+    let html = state.composing ? '<ul class="listRows" style="margin-bottom:16px">' + composerCard() + '</ul>' : ''
+    /* 归档档下加一条说明：这里的东西所属工作区已不在 DSH 中 */
+    if (state.filter === 'archived' && rows.length) {
+      html += '<div class="groupLabel">已归档 · ' + rows.length + ' · 所属工作区已删除</div>'
+    }
+    if (active.length) {
+      if (state.filter === 'all' && done.length) html += '<div class="groupLabel">未完成 · ' + active.length + '</div>'
+      html += '<ul class="listRows">' + active.map(r => renderCard(r.item, words)).join('') + '</ul>'
+    }
+    if (done.length) {
+      if (state.filter === 'all' && active.length) html += '<div class="groupLabel">已完成 · ' + done.length + '</div>'
+      html += '<ul class="listRows">' + done.map(r => renderCard(r.item, words)).join('') + '</ul>'
+    }
+    $('listScroll').innerHTML = html
+
+    /* 焦点恢复：编辑态与新建表单在每次渲染后重新聚焦 */
+    if (state.focus) {
+      const el = state.focus.kind === 'draft'
+        ? document.querySelector('[data-draft="' + state.focus.field + '"]')
+        : document.querySelector('.card[data-id="' + state.focus.id + '"] [data-edit="' + state.focus.field + '"]')
+      if (el) {
+        el.focus()
+        if (el.setSelectionRange && el.value) el.setSelectionRange(el.value.length, el.value.length)
+      }
+      state.focus = null
+    }
+  }
+
+  /* ── 进入 / 提交 / 放弃编辑 ───────────────────────────────────────────── */
+
+  function startEdit(id, field) {
+    if (!findItem(id)) return
+    state.editing = { id, field }
+    state.focus = { id, field }
+    render()
+  }
+
+  function commitEdit(el) {
+    if (!state.editing) return
+    const it = findItem(state.editing.id)
+    const field = state.editing.field
+    if (it) {
+      const value = el.value
+      if (field === 'title') it.title = value.trim() || it.title
+      else if (field === 'desc') it.desc = value.trim()
+      else if (field === 'tag') it.tag = value.trim()
+      touch(it)
+    }
+    state.editing = null
+    render()
+  }
+
+  function cancelEdit() { state.editing = null; render() }
+
+  function startCompose() {
+    state.composing = true
+    state.draft = { title: '', desc: '', tag: '' }
+    state.expandedId = null
+    state.editing = null
+    state.focus = { kind: 'draft', field: 'title' }
+    render()
+  }
+
+  function commitCreate() {
+    const d = state.draft
+    if (!d.title.trim()) return
+    state.items.unshift({
+      id: 'wi-' + (++uid), title: d.title.trim(), desc: d.desc.trim(), tag: d.tag.trim(),
+      status: 'open', createdAt: new Date().toISOString(), updateAt: new Date().toISOString(),
+    })
+    state.composing = false
+    state.draft = { title: '', desc: '', tag: '' }
+    render()
+  }
+
+  function cancelCreate() {
+    state.composing = false
+    state.draft = { title: '', desc: '', tag: '' }
+    render()
+  }
+
+  /* ── 写回：唯一能改变状态的入口 ───────────────────────────────────────── */
+
+  function writeBack(id) {
+    const it = findItem(id)
+    if (!it || isDone(it)) return
+    state.pending = id
+    state.editing = null
+    render()
+    setTimeout(() => {
+      it.completion = {
+        summary: '（原型演示）模型已完成本轮执行并把总结写回这条工作项。真实实现里，这段文本来自模型对 workbench_complete 的调用，作为会话事件落盘后由投影送达客户端。',
+        implementationPath: ['点击按钮排队一条用户消息', '模型调用 workbench_complete', '写入会话事件并由投影送达'],
+        changedFiles: [{ path: 'packages/workbench/src/index.ts', purpose: '工具注册与事件落盘' }],
+        verification: [{ command: 'pnpm test', result: 'passed' }],
+        completedAt: new Date().toISOString(), completedBy: 'model',
+      }
+      it.status = 'done'          // 写回即自动完结——状态不由用户设置
+      touch(it)
+      state.pending = null
+      render()
+    }, 1100)
+  }
+
+  /* ── 事件 ─────────────────────────────────────────────────────────────── */
+
+  $('searchInput').addEventListener('input', e => {
+    state.query = e.target.value
+    state.editing = null
+    render()
+  })
+  $('searchClear').addEventListener('click', () => { state.query = ''; $('searchInput').focus(); render() })
+  $('newBtn').addEventListener('click', startCompose)
+
+  $('filters').addEventListener('click', e => {
+    const chip = e.target.closest('[data-filter]')
+    if (!chip) return
+    state.filter = chip.dataset.filter
+    state.editing = null
+    render()
+  })
+
+  /* 点文本进入编辑；点动作按钮 */
+  $('listScroll').addEventListener('click', e => {
+    const start = e.target.closest('[data-start]')
+    if (start) {
+      const card = e.target.closest('.card')
+      if (state.editing && state.editing.id === card.dataset.id && state.editing.field === start.dataset.start) return
+      startEdit(card.dataset.id, start.dataset.start)
+      return
+    }
+
+    const btn = e.target.closest('[data-act]')
+    if (!btn) return
+    const act = btn.dataset.act
+    const card = e.target.closest('.card')
+    const item = card && card.dataset.id ? findItem(card.dataset.id) : undefined
+
+    if (act === 'toggle') {
+      state.expandedId = state.expandedId === item.id ? null : item.id
+      state.editing = null
+      render(); return
+    }
+    if (act === 'create') { commitCreate(); return }
+    if (act === 'cancel-new') { cancelCreate(); return }
+    if (act === 'delete') {
+      state.items = state.items.filter(i => i.id !== item.id)
+      if (state.expandedId === item.id) state.expandedId = null
+      render(); return
+    }
+    if (act === 'writeback') { writeBack(item.id); return }
+  })
+
+  /* 新建表单输入：不重渲染，避免丢焦点 */
+  $('listScroll').addEventListener('input', e => {
+    const el = e.target
+    if (el.dataset.draft && state.composing) state.draft[el.dataset.draft] = el.value
+  })
+
+  /* 失焦提交 */
+  $('listScroll').addEventListener('focusout', e => {
+    const el = e.target
+    if (!el.dataset || !el.dataset.edit) return
+    const card = el.closest('.card')
+    setTimeout(() => {
+      if (state.editing && state.editing.id === card.dataset.id && state.editing.field === el.dataset.edit) commitEdit(el)
+    }, 0)
+  })
+
+  /* 键盘：Enter 提交，Esc 放弃 */
+  $('listScroll').addEventListener('keydown', e => {
+    const el = e.target
+    if (e.key === 'Escape') {
+      if (state.composing) { cancelCreate(); return }
+      if (state.editing) { cancelEdit(); return }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      if (el.dataset.draft) {
+        e.preventDefault()
+        if (el.dataset.draft === 'title' || el.dataset.draft === 'tag') commitCreate()
+        return
+      }
+      if (el.dataset.edit === 'title' || el.dataset.edit === 'tag') { e.preventDefault(); commitEdit(el) }
+    }
+  })
+
+  $('themeToggle').addEventListener('click', e => {
+    const b = e.target.closest('[data-theme]')
+    if (!b) return
+    document.documentElement.dataset.theme = b.dataset.theme
+    for (const el of $('themeToggle').children) el.toggleAttribute('data-active', el === b)
+  })
+
+  render()
+})()
+</script>
+</body>
+</html>

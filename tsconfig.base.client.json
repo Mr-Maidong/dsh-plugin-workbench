@@ -1,0 +1,13 @@
+{
+  // Client-face compiler shape: browser library API and React JSX, no ambient
+  // Node types. The monorepo version additionally injects the repo-local
+  // `client-build-environment` ambient declarations and its `scripts/types`
+  // typeRoots; this standalone package reads no DSH_CLIENT_* build constant, so
+  // both are dropped and `types` is empty rather than inherited.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "ESNext.Disposable"],
+    "types": []
+  }
+}

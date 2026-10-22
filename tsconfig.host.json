@@ -1,0 +1,24 @@
+{
+  // Workspace anchor for @deepseek-ai/dsh-typert-generator: its tsdown plugin
+  // walks up from the tsdown outDir until it finds this file, then reads the
+  // project references below and accepts only packages physically under
+  // <anchor>/packages. Do not rename, and do not create another file of this
+  // name inside packages/workbench — either would move or shadow the anchor and
+  // silently stop artifact generation.
+  // It also carries the compiler options the generator builds its analysis
+  // program with: that program takes the aggregate's options and the referenced
+  // project's file list, so an anchor without them would analyse the sources
+  // under TypeScript's defaults. `rewriteRelativeImportExtensions` is off here,
+  // as in the monorepo aggregate, because this program only reads the sources.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rewriteRelativeImportExtensions": false
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/workbench/tsconfig.node.json"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  // Browser face: the right-Sidebar tab, its dictionaries, and its CSS Modules.
+  // `paths` pins the two self-referencing specifiers to declarations the host
+  // build emits first — both are tsc output under lib/types, because the host
+  // pass bundles with `dts: false` and the Typert generator does not run here
+  // (see ../../tsdown.config.ts). So type resolution never depends on Node or
+  // TypeScript package self-reference support. Build order matters: build:host
+  // first, or these two files do not exist yet.
+  "extends": "../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.web.tsbuildinfo",
+    "paths": {
+      "dsh-plugin-workbench/types": ["./lib/types/types.d.ts"],
+      "dsh-plugin-workbench/remote": ["./lib/types/typert.remote-client.d.ts"]
+    }
+  },
+  "include": ["src/client", "src/css-modules.d.ts"]
+}

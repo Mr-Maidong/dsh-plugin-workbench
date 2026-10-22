@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>工作台 · 就地编辑框尺寸对齐原型</title>
+<style>
+/* 与 sidebar-workbench.html / writeback-heading-row.html 同一套令牌回退值。
+   卡片与文本的数值全部照抄插件产物（titleText 14·550·21、descText 12.5·19、
+   tag padding 4/10 + lh15 + .5px 边框 = 24px），所以本页量到的像素就是侧边栏里的像素。 */
+:root {
+  --dsw-alias-bg-base: #ffffff;
+  --dsw-alias-bg-layer-1: #f6f6f7;
+  --dsw-alias-bg-layer-2: #ededf0;
+  --dsw-specific-sidebar-fill: #fafafb;
+  --dsw-alias-border-l1: rgba(0,0,0,.055);
+  --dsw-alias-border-l2: rgba(0,0,0,.09);
+  --dsw-alias-label-primary: #17171a;
+  --dsw-alias-label-secondary: #4d4d55;
+  --dsw-alias-label-tertiary: #7e7e88;
+  --dsw-alias-label-caption: #a4a4ae;
+  --dsw-alias-interactive-bg-hover: rgba(0,0,0,.045);
+  --dsw-alias-brand-primary: #2b6cf5;
+  --dsw-alias-state-business-primary: #2b6cf5;
+  --dsw-alias-state-success-primary: #12a05c;
+  --dsw-alias-state-idle-primary: #8e8e98;
+  --dsw-alias-state-error-primary: #d93b3b;
+  --dsh-focus-ring-color: #2b6cf5;
+  --card-shadow: 0 1px 2px rgba(0,0,0,.05), 0 0 0 .5px rgba(0,0,0,.04);
+}
+[data-theme="dark"] {
+  --dsw-alias-bg-base: #1c1c1f;
+  --dsw-alias-bg-layer-1: #242429;
+  --dsw-alias-bg-layer-2: #161618;
+  --dsw-specific-sidebar-fill: #1f1f23;
+  --dsw-alias-border-l1: rgba(255,255,255,.055);
+  --dsw-alias-border-l2: rgba(255,255,255,.09);
+  --dsw-alias-label-primary: #f0f0f3;
+  --dsw-alias-label-secondary: #ababb5;
+  --dsw-alias-label-tertiary: #7f7f8b;
+  --dsw-alias-label-caption: #61616d;
+  --dsw-alias-interactive-bg-hover: rgba(255,255,255,.06);
+  --dsw-alias-brand-primary: #5b8cff;
+  --dsw-alias-state-business-primary: #5b8cff;
+  --dsw-alias-state-success-primary: #32c07a;
+  --dsw-alias-state-idle-primary: #7f7f8b;
+  --dsw-alias-state-error-primary: #ef5f5f;
+  --dsh-focus-ring-color: #5b8cff;
+  --card-shadow: 0 1px 2px rgba(0,0,0,.28), 0 0 0 .5px rgba(255,255,255,.045);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1260px; margin: 0 auto; padding: 26px 22px 90px; }
+h1 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+h2 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+h3 { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); }
+p { margin: 0 0 8px; }
+.lead { max-width: 82ch; color: var(--dsw-alias-label-secondary); font-size: 13px; }
+.lead b { color: var(--dsw-alias-label-primary); font-weight: 600; }
+.note { color: var(--dsw-alias-label-tertiary); font-size: 12px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; }
+.toolbar {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
+  margin: 14px -22px 0; padding: 10px 22px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 88%, transparent);
+  backdrop-filter: blur(8px); border-bottom: .5px solid var(--dsw-alias-border-l1);
+}
+.toolbar a { color: var(--dsw-alias-label-secondary); text-decoration: none; font-size: 12px;
+  padding: 3px 9px; border-radius: 999px; border: .5px solid var(--dsw-alias-border-l2); }
+.toolbar a:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.toolbar button { margin-left: auto; height: 26px; padding: 0 11px; border: .5px solid var(--dsw-alias-border-l2);
+  border-radius: 999px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-secondary);
+  font: inherit; font-size: 12px; cursor: pointer; }
+section { margin-top: 32px; }
+.grid { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; }
+.pane { width: 356px; padding: 12px; border-radius: 16px;
+  border: .5px solid var(--dsw-alias-border-l1); background: var(--dsw-specific-sidebar-fill); }
+.pane.wide { width: auto; flex: 1; min-width: 360px; }
+.pill { display: inline-flex; align-items: center; height: 17px; padding: 0 7px; border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent);
+  color: var(--dsw-alias-state-business-primary); font-size: 10.5px; font-weight: 600; }
+.pill.bad { background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 15%, transparent); color: var(--dsw-alias-state-error-primary); }
+.pill.ok { background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 15%, transparent); color: var(--dsw-alias-state-success-primary); }
+
+/* ── 卡片外壳（照插件产物） ─────────────────────────────────────────── */
+.card { border: .5px solid var(--dsw-alias-border-l1); border-radius: 14px;
+  background: var(--dsw-alias-bg-base); box-shadow: var(--card-shadow); }
+.cardMain { display: flex; gap: 10px; padding: 11px 12px; }
+.glyph { flex: none; padding-top: 3px; }
+.body { flex: 1; min-width: 0; }
+.titleRow { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.descWrap { margin-top: 4px; }
+.metaRow { display: flex; align-items: center; gap: 8px; margin-top: 9px; min-width: 0; }
+.metaRow .spacer { flex: 1; min-width: 0; }
+.timestamp { color: var(--dsw-alias-label-caption); font-size: 11.5px; }
+
+/* ── 显示态：照抄 .titleText / .descText / .tag ─────────────────────── */
+.titleText { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--dsw-alias-label-primary); font: inherit;
+  font-size: 14px; font-weight: 550; line-height: 21px; letter-spacing: -.005em;
+  text-align: left; cursor: text; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.descText { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  overflow: hidden; margin: 0; padding: 0; border: 0; border-radius: 6px; background: transparent;
+  color: var(--dsw-alias-label-tertiary); font: inherit; font-size: 12.5px; line-height: 19px;
+  text-align: left; white-space: pre-wrap; cursor: text; overflow-wrap: anywhere; width: 100%; }
+.tag { display: inline-flex; align-items: center; flex: none; max-width: 130px; padding: 4px 10px;
+  border: .5px solid transparent; border-radius: 999px; background: var(--wb-accent-wash);
+  color: var(--dsw-alias-brand-primary); opacity: .8; font: inherit; font-size: 11.5px;
+  line-height: 15px; cursor: text; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root { --wb-accent-wash: color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);
+        --wb-hover: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);
+        --wb-border-strong: color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent); }
+
+/* ── 现状编辑框（照抄 .field / .fieldTitle / textarea.field / .metaRow .field） ── */
+.nowField { box-sizing: border-box; width: 100%; padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 55%, transparent);
+  border-radius: 11px; outline: none; background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; line-height: 19px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-brand-primary) 16%, transparent); }
+.nowTitle { height: 33px; font-size: 14px; font-weight: 550; }
+.nowDesc { min-height: 62px; resize: vertical; overflow: auto; display: block; }
+.nowTag { width: 108px; height: 28px; padding: 4px 9px; border-radius: 999px; font-size: 12px; flex: none; }
+
+/* ── 改后：盒子 = 原文盒子，三个变体只差"编辑感怎么画" ─────────────── */
+.ef { box-sizing: border-box; margin: 0; outline: none; font: inherit; font-weight: inherit;
+  letter-spacing: inherit; text-align: left; caret-color: var(--dsw-alias-brand-primary); }
+.efTitle { width: 100%; height: auto; padding: 0; border: 0; border-radius: 6px;
+  font-size: 14px; font-weight: 550; line-height: 21px; letter-spacing: -.005em;
+  color: var(--dsw-alias-label-primary); }
+.efDesc { display: block; width: 100%; height: 38px; padding: 0; border: 0; border-radius: 6px;
+  resize: none; overflow-y: auto; font-size: 12.5px; line-height: 19px;
+  color: var(--dsw-alias-label-tertiary); }
+.efTag { width: 108px; flex: none; padding: 4px 10px; border: .5px solid transparent; border-radius: 999px;
+  font-size: 11.5px; line-height: 15px; color: var(--dsw-alias-brand-primary); }
+/* E1 无痕：编辑态只多一个光标 */
+.E1 { background: transparent; }
+/* E2 一层淡底：用显示态本来就有的 hover 洗底当"可编辑"信号 */
+.E2 .efTitle, .E2 .efDesc { background: var(--wb-hover); }
+.E2 .efTag { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, transparent); }
+/* E3 淡底 + 内下沿：隐形描边画在盒子里面，不占布局、不外扩 */
+.E3 .efTitle, .E3 .efDesc { background: var(--wb-hover); box-shadow: inset 0 -1px 0 var(--wb-border-strong); }
+.E3 .efTag { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, transparent); }
+
+/* ── 读数与表格 ────────────────────────────────────────────────────── */
+.readout { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 11.5px;
+  color: var(--dsw-alias-label-tertiary); }
+.readout b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600;
+  color: var(--dsw-alias-label-secondary); }
+.readout .delta { color: var(--dsw-alias-state-error-primary); font-weight: 600; }
+.readout .delta.zero { color: var(--dsw-alias-state-success-primary); }
+table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 12.5px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: .5px solid var(--dsw-alias-border-l1); vertical-align: top; }
+th { color: var(--dsw-alias-label-tertiary); font-weight: 600; font-size: 11.5px; }
+td.num { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; }
+td.bad { color: var(--dsw-alias-state-error-primary); }
+td.good { color: var(--dsw-alias-state-success-primary); }
+.qa { margin-top: 12px; padding: 14px 16px; border-radius: 14px;
+  border: .5px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-base); }
+.qa ol { margin: 0; padding-left: 20px; }
+.qa li { margin-bottom: 7px; font-size: 13px; }
+.qa .pick { color: var(--dsw-alias-state-business-primary); font-weight: 600; }
+.zoomEdge { margin-top: 10px; padding: 10px; border-radius: 12px;
+  border: .5px dashed var(--dsw-alias-border-l2); }
+.zoomEdge .row { display: flex; align-items: center; gap: 8px; font-size: 11.5px;
+  color: var(--dsw-alias-label-tertiary); margin-bottom: 8px; }
+.zoomEdge .row:last-child { margin-bottom: 0; }
+.zoomEdge .boxNow { width: 46px; height: 16px; border-radius: 5px;
+  background: var(--dsw-alias-bg-base); border: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-brand-primary) 16%, transparent); }
+.zoomEdge .boxE2 { width: 46px; height: 10px; border-radius: 4px; background: var(--wb-hover); }
+.zoomEdge .boxE3 { width: 46px; height: 10px; border-radius: 4px; background: var(--wb-hover);
+  box-shadow: inset 0 -1px 0 var(--wb-border-strong); }
+.zoomEdge .boxE1 { width: 46px; height: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>就地编辑：输入框尺寸对齐原文 + 淡化边框与外阴影</h1>
+<p class="lead">
+  要求：点 title / 描述 / 标签进入编辑时，<b>输入框的盒子要和被替换的文本逐像素一致</b>，并且
+  <b>尽量淡化边框和外阴影</b>，别让卡片高度闪动。本页把跳动来源量化到像素（读数是浏览器实测的，
+  不是算的），并给三个「编辑感怎么画」的变体；三个变体的<b>尺寸完全一样</b>，只为隔离「编辑态长什么样」这一个变量。
+</p>
+
+<div class="toolbar">
+  <a href="#audit">① 跳动来源与实测</a>
+  <a href="#variants">② 三个编辑态处理</a>
+  <a href="#long">③ 长描述怎么办</a>
+  <a href="#ask">④ 要你定的三件事</a>
+  <button type="button" id="theme">切换浅色 / 深色</button>
+</div>
+
+<!-- ══════════════════════ ① 跳动来源 ══════════════════════ -->
+<section id="audit">
+  <h2>① 跳动来源（左边原文、右边现在的编辑框，读数是实测高度）</h2>
+  <p class="note">三种字段各一张卡：同一段文字，左边是显示态，右边是点下去之后的现状编辑框。卡片高度差就是你会看到的闪动幅度。</p>
+  <div class="grid">
+
+    <div class="pane">
+      <h3>标题 · 显示态 → 编辑态（现状）</h3>
+      <div class="card" data-card="t1"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow"><button class="titleText" data-h="t1a">收敛写回链路的冲突提示</button></div>
+        </div>
+      </div></div>
+      <div class="card" data-card="t2" style="margin-top:10px"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow"><input class="nowField nowTitle" value="收敛写回链路的冲突提示" data-h="t2a" /></div>
+        </div>
+      </div></div>
+      <div class="readout">标题行：<b data-out="t1a">–</b> → <b data-out="t2a">–</b> <span class="delta" data-delta="t1a,t2a">–</span></div>
+      <p class="note">`.fieldTitle { height: 33px }` 顶掉了 `.titleText` 的 21px 行盒——<b>+12px</b>，整张卡往下长。</p>
+    </div>
+
+    <div class="pane">
+      <h3>描述 · 显示态 → 编辑态（现状）</h3>
+      <div class="card" data-card="d1"><div class="cardMain">
+        <div class="body"><button class="descText" data-h="d1a">把写回链路的冲突提示收敛成一条，并把按钮搬进标题行。</button></div>
+      </div></div>
+      <div class="card" data-card="d2" style="margin-top:10px"><div class="cardMain">
+        <div class="body"><textarea class="nowField nowDesc" data-h="d2a">把写回链路的冲突提示收敛成一条，并把按钮搬进标题行。</textarea></div>
+      </div></div>
+      <div class="readout">描述块：<b data-out="d1a">–</b> → <b data-out="d2a">–</b> <span class="delta" data-delta="d1a,d2a">–</span></div>
+      <p class="note">`textarea.field { min-height: 62px }`：对一行描述（19px）是 <b>+43px</b>，对两行描述（38px，本页这段就是）是 <b>+24px</b>。这是最大的一处闪动。</p>
+    </div>
+
+    <div class="pane">
+      <h3>标签 · 显示态 → 编辑态（现状）</h3>
+      <div class="card" data-card="g1"><div class="cardMain">
+        <div class="body"><div class="metaRow"><button class="tag" data-h="g1a">DSH插件</button><span class="spacer"></span><span class="timestamp">18:50</span></div></div>
+      </div></div>
+      <div class="card" data-card="g2" style="margin-top:10px"><div class="cardMain">
+        <div class="body"><div class="metaRow"><input class="nowField nowTag" value="DSH插件" data-h="g2a" /><span class="spacer"></span><span class="timestamp">18:50</span></div></div>
+      </div></div>
+      <div class="readout">胶囊：<b data-out="g1a">–</b> → <b data-out="g2a">–</b> <span class="delta" data-delta="g1a,g2a">–</span></div>
+      <p class="note">胶囊是 `4px 10px` 内边距 + `line-height:15px` + 0.5px 边框，浏览器实测 25px（0.5px 的边框在非 HiDPI 下按 1px 占位）；编辑框直接写死 28px——<b>+3px</b>。</p>
+    </div>
+
+    <div class="pane">
+      <h3>还有两处「文字本身在闪」</h3>
+      <div class="zoomEdge">
+        <div class="row"><span class="boxNow" style="width:58px"></span> 现状编辑框：1px 品牌描边 + <span class="mono">0 0 0 3px</span> 外发光</div>
+        <div class="row"><span class="boxE3" style="width:58px"></span> E3：淡底 + 内侧下沿（`inset`，不外扩）</div>
+        <div class="row"><span class="boxE2" style="width:58px"></span> E2：只有一层淡底，没有描边</div>
+        <div class="row"><span class="boxE1" style="width:58px"></span> E1：什么都没有，靠光标</div>
+      </div>
+      <table>
+        <tr><th>字段</th><th>原文样式</th><th>现在编辑态</th></tr>
+        <tr><td>描述</td><td class="num">tertiary · 12.5px</td><td class="bad num">primary · 13px</td></tr>
+        <tr><td>标签</td><td class="num">brand · 11.5px · 0.8透明</td><td class="bad num">primary · 12px · 不透明</td></tr>
+        <tr><td>已完成标题</td><td class="num">tertiary · 450</td><td class="bad num">primary · 550</td></tr>
+      </table>
+      <p class="note">`.field` 里写死了 `color: label-primary; font-size: 13px`，所以点下去的瞬间这几种文字会变色变字号。这一条我会一并改掉（除非你说不要）。</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════ ② 三个变体 ══════════════════════ -->
+<section id="variants">
+  <h2>② 三个编辑态处理（尺寸三者完全相同，只差"编辑感"）</h2>
+  <p class="note">每张卡都是三个字段<b>同时处于编辑态</b>，用的是改后的尺寸：标题 21px、描述 38px、标签 24px。请看三者的区别，而不是大小。</p>
+  <div class="grid">
+
+    <div class="pane E1">
+      <h3>E1 无痕 <span class="pill">最安静</span></h3>
+      <div class="card" data-card="e1"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow"><input class="ef efTitle" value="收敛写回链路的冲突提示" data-h="e1t" /></div>
+          <div class="descWrap"><textarea class="ef efDesc" rows="1" data-h="e1d">把写回链路的冲突提示收敛成一条，并把按钮搬进标题行。</textarea></div>
+          <div class="metaRow"><input class="ef efTag" value="DSH插件" data-h="e1g" /><span class="spacer"></span><span class="statusWord" style="color:var(--dsw-alias-label-tertiary);font-size:11.5px"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--dsw-alias-state-business-primary);margin-right:5px"></span>进行中</span><span class="timestamp">18:50</span></div>
+        </div>
+      </div></div>
+      <div class="readout">标题 <b data-out="e1t">–</b> · 描述 <b data-out="e1d">–</b> · 标签 <b data-out="e1g">–</b></div>
+      <p class="note">盒子与原文一模一样，编辑信号只有闪烁的光标（我给它上了品牌色）。最"零成本"，但编辑态几乎不可见——尤其是标签，看起来和平时没差别。</p>
+    </div>
+
+    <div class="pane E2">
+      <h3>E2 一层淡底 <span class="pill">推荐</span></h3>
+      <div class="card" data-card="e2"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow"><input class="ef efTitle" value="收敛写回链路的冲突提示" data-h="e2t" /></div>
+          <div class="descWrap"><textarea class="ef efDesc" rows="1" data-h="e2d">把写回链路的冲突提示收敛成一条，并把按钮搬进标题行。</textarea></div>
+          <div class="metaRow"><input class="ef efTag" value="DSH插件" data-h="e2g" /><span class="spacer"></span><span class="statusWord" style="color:var(--dsw-alias-label-tertiary);font-size:11.5px"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--dsw-alias-state-business-primary);margin-right:5px"></span>进行中</span><span class="timestamp">18:50</span></div>
+        </div>
+      </div></div>
+      <div class="readout">标题 <b data-out="e2t">–</b> · 描述 <b data-out="e2d">–</b> · 标签 <b data-out="e2g">–</b></div>
+      <p class="note">用显示态本来就有的 hover 洗底（标签则沿用它自己的蓝底、只加深一档）当信号：没有描边、没有外发光、尺寸不变。因为悬停时就有这层底，鼠标点下去的过渡几乎是连续的。</p>
+    </div>
+
+    <div class="pane E3">
+      <h3>E3 淡底 + 内侧下沿</h3>
+      <div class="card" data-card="e3"><div class="cardMain">
+        <span class="glyph"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3" style="color:var(--dsw-alias-state-idle-primary)"/></svg></span>
+        <div class="body">
+          <div class="titleRow"><input class="ef efTitle" value="收敛写回链路的冲突提示" data-h="e3t" /></div>
+          <div class="descWrap"><textarea class="ef efDesc" rows="1" data-h="e3d">把写回链路的冲突提示收敛成一条，并把按钮搬进标题行。</textarea></div>
+          <div class="metaRow"><input class="ef efTag" value="DSH插件" data-h="e3g" /><span class="spacer"></span><span class="statusWord" style="color:var(--dsw-alias-label-tertiary);font-size:11.5px"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--dsw-alias-state-business-primary);margin-right:5px"></span>进行中</span><span class="timestamp">18:50</span></div>
+        </div>
+      </div></div>
+      <div class="readout">标题 <b data-out="e3t">–</b> · 描述 <b data-out="e3d">–</b> · 标签 <b data-out="e3g">–</b></div>
+      <p class="note">在 E2 上多一条 `inset` 的下沿——这是"还有没有一点点边框"的分寸线：它画在盒子内侧，不占布局、不外扩，所以尺寸仍然零变化。标签保持胶囊形状，不加下沿。</p>
+    </div>
+
+    <div class="pane wide">
+      <h3>改后尺寸审计（对照现状）</h3>
+      <table>
+        <tr><th>字段</th><th>原文盒子</th><th>现在编辑框</th><th>跳动</th><th>改后编辑框</th><th>跳动</th></tr>
+        <tr><td>标题</td><td class="num">21px（lh 21）</td><td class="num">33px</td><td class="bad num">+12</td><td class="num">21px（lh 21、无内边距无边框）</td><td class="good num">0</td></tr>
+        <tr><td>描述（1 行）</td><td class="num">19px</td><td class="num">62px</td><td class="bad num">+43</td><td class="num">19px（随内容长，封顶 38）</td><td class="good num">0</td></tr>
+        <tr><td>描述（2 行）</td><td class="num">38px</td><td class="num">62px</td><td class="bad num">+24</td><td class="num">38px</td><td class="good num">0</td></tr>
+        <tr><td>描述（5 行）</td><td class="num">38px（截断）</td><td class="num">62px+</td><td class="bad num">+24↑</td><td class="num">38px（框内滚动）</td><td class="good num">0</td></tr>
+        <tr><td>标签</td><td class="num">25px（4/10、lh 15、0.5px 边框）</td><td class="num">28px</td><td class="bad num">+3</td><td class="num">25px（照拄胶囊的度量）</td><td class="good num">0</td></tr>
+        <tr><td>外发光</td><td class="num">无</td><td class="num">0 0 0 3px 品牌 16%</td><td class="bad num">视觉外扩 3px</td><td class="num">无（E2/E3 只有 inset）</td><td class="good num">0</td></tr>
+      </table>
+      <p class="note">
+        描述框为什么必须先把 `rows` 设成 1：`scrollHeight` 不会小于元素自身的高度，默认的 `rows=2` 会让一行描述也被撑到 38px。
+        描述框要按内容自动长高，需要 8 行 JS（挂载与每次输入时按 `scrollHeight` 设高，夹在 19–38px 之间）；
+        CSS 的 `field-sizing: content` 能一行搞定，但它要求 Chromium ≥ 123，不支持时会静默退回固定高度、
+        把跳动又带回来——所以我选 JS。
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════ ③ 长描述 ══════════════════════ -->
+<section id="long">
+  <h2>③ 长描述（5 行）在两种策略下的区别</h2>
+  <p class="note">列表里的描述固定截断在 2 行（37→38px）。编辑时要跟它对齐，就只有两条路：框内滚动，或者继续长高。</p>
+  <div class="grid">
+    <div class="pane">
+      <h3>策略 A：封顶 2 行 + 框内滚动 <span class="pill">推荐</span></h3>
+      <div class="card"><div class="cardMain"><div class="body">
+        <div class="titleRow"><button class="titleText">继续P3开发</button></div>
+        <div class="descWrap"><textarea class="ef efDesc" rows="1" data-h="la" rows="2">第一行：把写回控件搬进标题行。
+第二行：编辑框与原文逐像素对齐。
+第三行：超过两行的部分在框内滚动。
+第四行：这样卡片高度永远不动。
+第五行：符合"别闪动"的要求。</textarea></div>
+      </div></div></div>
+      <div class="readout">编辑框：<b data-out="la">–</b> · 提交后原文：<b>38px</b> <span class="delta zero">Δ 0</span></div>
+      <p class="note">点下去、打字、提交，高度始终 38px；代价是长描述要框内滚动才能看全（列表里本来也只看得到两行）。</p>
+    </div>
+    <div class="pane">
+      <h3>策略 B：跟着内容长高</h3>
+      <div class="card"><div class="cardMain"><div class="body">
+        <div class="titleRow"><button class="titleText">继续P3开发</button></div>
+        <div class="descWrap"><textarea class="ef efDesc" data-h="lb" style="height:95px">第一行：把写回控件搬进标题行。
+第二行：编辑框与原文逐像素对齐。
+第三行：超过两行的部分在框内滚动。
+第四行：这样卡片高度永远不动。
+第五行：符合"别闪动"的要求。</textarea></div>
+      </div></div></div>
+      <div class="readout">编辑框：<b data-out="lb">–</b> · 提交后原文：<b>38px</b> <span class="delta">Δ −57</span></div>
+      <p class="note">编辑时能看到全文，但点下去就长高 57px、提交后又缩回来——正好是你不想看到的两次跳动。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ ④ 问题 ══════════════════════ -->
+<section id="ask">
+  <h2>④ 要你定的三件事</h2>
+  <div class="qa">
+    <ol>
+      <li><b>编辑态怎么画</b>：<span class="pick">E2 一层淡底（推荐）</span> / E3 淡底 + 内侧下沿（想留一点"这里能输入"的框感） / E1 无痕（只有光标）。</li>
+      <li><b>长描述</b>：<span class="pick">策略 A 封顶两行 + 框内滚动（推荐，高度零变化）</span> / 策略 B 跟着内容长高（编辑时看全，但提交前后各跳一次）。</li>
+      <li><b>标签编辑框的宽度</b>：<span class="pick">固定 108px（推荐，宽度不参与本次"不闪动"目标）</span> / 跟随文字宽度（更贴合，但要用 `field-sizing: content`，旧 Chromium 会静默退回固定宽度）。</li>
+    </ol>
+    <p class="note" style="margin:0">
+      另外两条我打算直接做，除非你否掉：① 编辑态的文字颜色 / 字号 / 字重与原文完全一致（含「已完成」卡的标题、空描述的斜体占位）；
+      ② 标签编辑态沿用它自己的蓝色洗底（换成灰底会让胶囊在点击瞬间变色）。
+    </p>
+  </div>
+</section>
+
+</div>
+<script>
+  const root = document.documentElement
+
+  // 实测：把每个 [data-h] 元素的高度写进同名的读数格
+  const heights = {}
+  const measure = () => {
+    document.querySelectorAll('[data-h]').forEach(el => {
+      const key = el.dataset.h
+      const h = el.getBoundingClientRect().height
+      heights[key] = h
+      document.querySelectorAll(`.readout b[data-out="${key}"]`).forEach(out => {
+        out.textContent = h.toFixed(1) + 'px'
+      })
+    })
+    document.querySelectorAll('[data-delta]').forEach(node => {
+      const [a, b] = node.dataset.delta.split(',')
+      const d = heights[b] - heights[a]
+      node.textContent = (d >= 0 ? '+' : '') + d.toFixed(1) + 'px'
+      if (Math.abs(d) < 0.6) node.classList.add('zero')
+    })
+  }
+
+  // 描述框按内容自动长高（19–38px），模拟插件里那 8 行 JS
+  const autogrow = () => {
+    document.querySelectorAll('textarea.efDesc').forEach(el => {
+      if (el.dataset.h === 'lb') return
+      el.style.height = 'auto'
+      el.style.height = Math.max(19, Math.min(38, el.scrollHeight)) + 'px'
+    })
+  }
+
+  document.querySelectorAll('textarea.efDesc').forEach(el => {
+    el.addEventListener('input', () => { autogrow(); measure() })
+  })
+
+  const run = () => { autogrow(); measure() }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(run)
+  window.addEventListener('resize', run)
+  run()
+
+  document.getElementById('theme').addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'
+    requestAnimationFrame(run)
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,1289 @@
+/*
+ * Workbench pane.
+ *
+ * TOKEN DISCIPLINE — read this before adding a `var()`.
+ *
+ * The live theme exposes exactly fourteen `--dsw-alias-*` tokens (verified
+ * against the running Client through the Theme Inspect provider):
+ *
+ *   bg-base, bg-layer-1, bg-layer-2, bg-overlay,
+ *   border-l1, border-l2,
+ *   brand-primary,
+ *   label-primary, label-secondary,
+ *   state-error-primary, state-idle-primary, state-success-primary, state-warn-primary,
+ *   and --dsw-specific-sidebar-fill.
+ *
+ * The approved prototype (prototype/sidebar-workbench.html) uses several names
+ * that are NOT in that set — `label-tertiary`, `label-caption`,
+ * `state-business-primary`, `interactive-bg-hover`, `border-l3` — because it
+ * declared its own `:root` values and could name anything. In the real plugin
+ * those names would resolve to nothing, the declaration would be dropped, and
+ * the pane would silently lose its muted text, hover states, and accent colour.
+ *
+ * So the five missing roles are derived here, once, from tokens that do exist.
+ *
+ * The two muted tiers mix `label-secondary` toward `bg-base` — not toward
+ * `transparent`. The 72% and 51% fractions are measured, not arbitrary: they
+ * reproduce the prototype's own light-mode tertiary (#7e7e88) and caption
+ * (#a4a4ae), and its dark-mode pair (#7f7f8b, #61616d), to within about one
+ * percent, because the fraction happens to be nearly theme-independent. Mixing
+ * toward `transparent` instead was the previous, visibly wrong behaviour: it
+ * leaves both tiers at nearly full-strength secondary in either theme.
+ *
+ * Every value below is the prototype's; only the token *names* are substituted.
+ */
+
+.pane {
+  /* Muted text, tier 3 — the prototype's `label-tertiary`. */
+  --wb-tertiary: color-mix(in srgb, var(--dsw-alias-label-secondary) 72%, var(--dsw-alias-bg-base));
+  /* Quietest text — the prototype's `label-caption`. */
+  --wb-caption: color-mix(in srgb, var(--dsw-alias-label-secondary) 51%, var(--dsw-alias-bg-base));
+  /* Accent — the module's stand-in for the prototype's `state-business-primary`. */
+  --wb-business: var(--dsw-alias-brand-primary);
+  /* Hover wash: a tint of the text colour, so it reads as "lifted" in both themes. */
+  --wb-hover: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);
+  /* The strongest border tier the theme does not ship (the prototype's `border-l3`). */
+  --wb-border-strong: color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+  /* Accent surface for the active filter chip and the tag pill. */
+  --wb-accent-wash: color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);
+
+  /*
+   * Elevation only: the card now draws its own 0.5px border, so a ring inside the
+   * shadow would double it. Magnitudes are the prototype's light-mode pair.
+   */
+  --wb-card-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+  --wb-card-shadow-hover: 0 3px 10px rgb(0 0 0 / 8%);
+
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  color: var(--dsw-alias-label-primary);
+  /* One spring for every height and rotation change in a card (§9.18): a back-out
+     curve, so a change lands with a wobble instead of a stop. It peaks 9.8% past
+     its target, and the fold clips whatever it overshoots by. */
+  --wb-jelly: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------------------------------------------------------------- toolbar */
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  /* No flex gap: the prototype spaces this column with its children's own
+     margins (`.filterRow { margin-top: 12px }`), and a gap would add to them. */
+  padding: 14px 16px 0;
+  flex: none;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 11px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 13px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--wb-tertiary);
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.searchField:focus-within {
+  border-color: var(--wb-business);
+  background: var(--dsw-alias-bg-base);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.searchInput::placeholder {
+  color: var(--wb-caption);
+}
+
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  height: 28px;
+  padding: 0 11px;
+  border: 0.5px solid transparent;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.chip:hover {
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.chipFlat {
+  height: 26px;
+  background: transparent;
+}
+
+.chipFlat:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.chipActive {
+  background: var(--wb-accent-wash);
+  color: var(--wb-business);
+}
+
+.chipActive:hover {
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 20%, transparent);
+}
+
+.chipCount {
+  color: inherit;
+  opacity: 0.62;
+  font-variant-numeric: tabular-nums;
+}
+
+.titleIcon {
+  flex: none;
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+.filterSpacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--wb-tertiary);
+  cursor: pointer;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.iconBtn:hover {
+  background: var(--wb-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.iconBtn:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+/* The tab's own close control, never drawn.
+   `DockLayout` renders one close button per closable tab and tags it with the
+   tab id (`data-dockkit-tab-close`, dockkit 0.2.0-rc.2), while `canCloseTab` —
+   the platform's only veto — refuses nothing but the guide page. A tab type
+   cannot declare itself unclosable, so this hides the affordance and §9.8's
+   guardian supplies the behaviour: the tab still closes on a click or the menu,
+   it just comes back.
+
+   An attribute selector rather than a class: this sheet's class names are hashed
+   (`SWF62W_tab`), and the platform's `.tabClose` sets `display: flex` at the
+   same specificity, so the element qualifier is what settles the tie without
+   depending on which plugin's sheet the document injects first. `display: none`
+   also takes the button out of the tab order while leaving it in the DOM, which
+   is what React needs — removing the node would break its reconciliation. */
+button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
+  display: none;
+}
+
+/* ------------------------------------------------------------------- list */
+
+.scroller {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 14px 24px;
+  scrollbar-gutter: stable;
+  /* §9.25: the expanded area's cap is measured against the visible working set,
+     so this scroller is the size container the cap reads (`50cqh`). Its height
+     is already definite — flex item within the pane — and a scroll container's
+     own height never depends on its content, which is what the containment
+     this declaration adds requires. */
+  container-type: size;
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 4px 9px;
+  color: var(--wb-caption);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.groupLabel::after {
+  content: '';
+  flex: 1;
+  height: 0.5px;
+  background: var(--dsw-alias-border-l1);
+}
+
+/* Prototype `.listRows + .groupLabel`: a group heading stands further off the
+   finished block above it than off the list it introduces. */
+.list + .groupLabel {
+  margin-top: 20px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  padding: 10px 12px;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: var(--wb-card-shadow);
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.card:hover {
+  box-shadow: var(--wb-card-shadow-hover);
+}
+
+/* Composing is signalled by the accent border alone; the prototype adds neither
+   a ring nor a glow. */
+.cardComposing {
+  border-color: color-mix(in srgb, var(--wb-business) 42%, transparent);
+}
+
+/* A finished item is an execution record: dimmed, but still fully editable. */
+.cardDone {
+  opacity: 0.72;
+}
+
+.cardDone:hover {
+  opacity: 1;
+}
+
+/*
+ * Archived: kept, but out of play.
+ *
+ * Archive is orthogonal to status, so this composes with `.cardDone` rather than
+ * replacing it. The card keeps its shape and stays editable — an archived item is
+ * still a record with a history — and is separated by surface and by a dashed
+ * ring instead, which reads as "no longer part of the working set" without the
+ * disappearance that hiding the row would cause. Comes after `.cardDone` so its
+ * background wins when an item is both.
+ */
+.cardArchived {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent);
+  border-style: dashed;
+}
+
+/* Prototype `.card[data-archived] .glyph`: the status mark recedes too. */
+.cardArchived .glyph {
+  opacity: 0.55;
+}
+
+.cardArchived .titleText {
+  color: var(--wb-tertiary);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/*
+ * The status mark in the card's left margin — the prototype's `.glyph`.
+ *
+ * A 17px slot holding a 15px ring, laid out the prototype's way (no height, a 2px
+ * drop): the slot's width plus `.cardHead`'s 11px gap is what the expanded area's
+ * indent is measured against, so the detail block lines up with the body column
+ * rather than with the card edge.
+ */
+.glyph {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  width: 15px;
+  margin-top: 3px;
+  color: var(--dsw-alias-state-idle-primary);
+}
+
+.glyphDone {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+/* The composing card's ring takes the accent, so "being written" is
+   distinguishable from "open" before the item exists. */
+.glyphComposing {
+  color: var(--wb-business);
+}
+
+/* The status word's own mark: 6px, and drawn only for a status that has
+   something to say. A different thing from `.glyph` above, which is the ring. */
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.dotInProgress {
+  background: var(--wb-business);
+}
+
+.dotDone {
+  background: var(--dsw-alias-state-success-primary);
+}
+
+.cardBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Prototype `.head` minus its timestamp: the title, and the send control the
+ * prototype never had, on one baseline. The timestamp moved to the foot at the
+ * user's request (§9.11 第 5 条), which is a deliberate departure from the prototype
+ * — the prototype cannot arbitrate this one, because it has no send control to
+ * place and therefore no view about which edge each belongs on.
+ */
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.titleText {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  /* 4px of air on each side, and `.fieldTitle` carries the same 4px — horizontal
+     only, so the 21px line box is untouched (§9.16). */
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 20px;
+  letter-spacing: -0.005em;
+  text-align: left;
+  cursor: text;
+  /* One line, truncated, as in the prototype: a card's height stays predictable,
+     and clicking puts the whole title in a field. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Display state is plain text: no border, no background — the hover wash and
+   the text cursor are the only affordances (§5.4). */
+.titleText:hover {
+  background: var(--wb-hover);
+}
+
+.cardDone .titleText {
+  color: var(--wb-tertiary);
+  font-weight: 450;
+}
+
+.descText {
+  /* Two lines, as in the prototype: a description is a note beside the title and
+     should not push the rest of the card off the pane. `line-clamp` needs its own
+     box, and a `<button>` carries it the same way the prototype's `<span>` does. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin: 4px 0 0;
+  /* Same 4px as `.fieldDesc` (§9.16); horizontal only, so the clamp and the
+     measured height are unaffected. */
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wb-tertiary);
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 18px;
+  text-align: left;
+  white-space: pre-wrap;
+  cursor: text;
+  overflow-wrap: anywhere;
+}
+
+.descText:hover {
+  background: var(--wb-hover);
+}
+
+.descEmpty {
+  color: var(--wb-caption);
+  font-style: italic;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  min-width: 0;
+}
+
+/* Prototype `.spacer`: pushes the card's controls to the trailing edge, so the
+   hover-revealed delete cannot drag the disclosure button around with it. */
+.metaSpacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  max-width: 130px;
+  /* 26px → 24px: two pixels off the chip's height at the user's request (§9.11
+     第 7 条). That makes the chevron's 24px box the tallest thing in the foot, so
+     the row tightens by the same two pixels. */
+  padding: 4px 10px;
+  border: 0.5px solid transparent;
+  border-radius: 999px;
+  background: var(--wb-accent-wash);
+  color: var(--dsw-alias-brand-primary);
+  /* A touch of transparency, also at the user's request: the tag is a label rather
+     than an action, and it should sit back the way its own wash does. The value is
+     on the whole control, so the empty state's dashed outline fades with it. */
+  opacity: 0.8;
+  font: inherit;
+  font-size: 10.5px;
+  /* Not type: this line box is layout — it sets the pill's height, which matches
+     the footer's 24px chevron box (§9.11 item 7). So the one-step font drop of
+     §9.17 leaves it alone. */
+  line-height: 15px;
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagEmpty {
+  background: transparent;
+  border: 0.5px dashed var(--dsw-alias-border-l2);
+  color: var(--wb-caption);
+}
+
+.statusWord {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--wb-tertiary);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.archivedBadge {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--wb-tertiary);
+  font-size: 10px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+/*
+ * The timestamp, in the foot: the heading line's trailing edge belongs to the send
+ * control now (§9.11 第 5 条). `flex: none` keeps a long tag from squeezing it.
+ */
+.time {
+  flex: none;
+  color: var(--wb-caption);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The send control, on the heading line's trailing edge.
+ *
+ * It is the foot's icon button — 24px, caption ink, 13px glyph — wearing a circular
+ * wash instead of the square one, with the same overhang the chevron carries: -4px
+ * puts it in the column the foot's trailing control sits in, and the vertical -3px
+ * pair keeps a 24px box from stretching a 21px line.
+ *
+ * No filled surface. It had the prototype's `.btnPrimary` disc for one round; the
+ * user asked for it back to plain (§9.11 第 5 条), which is the better reading of
+ * the action anyway — filling the composer is not sending, so the control stays as
+ * quiet as its neighbours.
+ */
+.sendBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: -3px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wb-caption);
+  cursor: pointer;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.sendBtn:hover {
+  background: var(--wb-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.sendBtn:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sendBtn {
+    transition: none;
+  }
+}
+
+.chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: -3px -4px -3px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wb-caption);
+  cursor: pointer;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.chevron:hover {
+  background: var(--wb-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.chevron:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+/* Rotating the glyph rather than the button — see the note on `.chevron svg`. */
+.chevronOpen svg {
+  rotate: 90deg;
+}
+
+/*
+ * Both glyph effects live on the `svg`, never on the button. A transform on the
+ * button takes its rounded hover/press background with it, so the square visibly
+ * spins during the sweep. `rotate` and `scale` are separate properties, which is
+ * also what lets the spring rotation and the press squash coexist.
+ */
+.chevron svg {
+  transition: rotate 300ms var(--wb-jelly), scale 120ms ease;
+}
+
+.chevron:active svg {
+  scale: 0.82;
+}
+
+/*
+ * The card foot's trailing control: the disclosure.
+ *
+ * The send control sat here too until §9.11 第 5 条 moved it to the heading line and
+ * brought the timestamp down to this end. What is left is the ported chevron's own
+ * 24px box — 8px radius, caption ink, 13px glyph — held against the card's trailing
+ * edge by `.metaSpacer`, so it stays put whatever the row contains.
+ *
+ * Delete is deliberately not here either: it lives at the end of the expanded area
+ * (`.detailBar`), where the prototype puts it. A destructive control has no business
+ * on a row the user is scanning, and opening the card first is a gesture worth
+ * spending.
+ */
+.cardActions {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+}
+
+.cardActions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wb-caption);
+  cursor: pointer;
+  transition: opacity 130ms ease, background 130ms ease, color 130ms ease;
+}
+
+.cardActions > button:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardActions > button {
+    transition: none;
+  }
+}
+
+/* ----------------------------------------------------------- edit fields */
+
+/*
+ * A field occupies the box of the text it replaces, to the pixel (§9.14): the
+ * card must not move when a title, a description or a tag is clicked. Each
+ * modifier therefore restates its display element's metrics instead of scaling
+ * them — down to the pill's transparent 0.5px border, which Chromium rounds up to
+ * 1px and which is part of the pill's measured 25px height.
+ *
+ * The old 1px brand border and its 3px outer glow are gone. An edit state is now
+ * marked by one wash of ink — the display state's own hover wash, so the control
+ * reads as waking up rather than as a different control — plus a brand-coloured
+ * caret. None of it costs layout: a background is not a box, and the file's other
+ * outlines are all inset.
+ */
+.field {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: var(--wb-hover);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  caret-color: var(--wb-business);
+}
+
+/* `.titleText` is 14px/550 in a 21px line box, and this declares no height on
+   purpose: an input with a matching line-height is 21px tall by itself, which is
+   what makes the two boxes the same one. */
+.fieldTitle {
+  /* The display element's own 4px (§9.16): without it the text would jump 4px
+     sideways the moment the title is clicked. */
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 20px;
+  letter-spacing: -0.005em;
+  color: var(--dsw-alias-label-primary);
+}
+
+/* A finished item's title is tertiary and lighter while displayed (`.cardDone
+   .titleText`), so its field is too — otherwise the text would change colour and
+   weight the moment the card is clicked. */
+.cardDone .fieldTitle {
+  color: var(--wb-tertiary);
+  font-weight: 450;
+}
+
+/* `.descText` is 12.5px/19px in at most two lines, with 4px above it. The height
+   here is one line and the cap is the display's own clamp; `InlineField` measures
+   the field against that cap, so a third line becomes a scrollbar rather than a
+   taller card. */
+.fieldDesc {
+  display: block;
+  /* The display element's own 4px (§9.16). Horizontal only, so the height the
+     layout effect measures is unchanged. */
+  padding: 0 4px;
+  height: 18px;
+  max-height: 36px;
+  /* The one card height that changes without a fold (§9.18): a description
+     growing into its second line springs instead of jumping. */
+  transition: height 240ms var(--wb-jelly);
+  margin-top: 4px;
+  overflow-y: auto;
+  resize: none;
+  font-size: 11.5px;
+  line-height: 18px;
+  color: var(--wb-tertiary);
+}
+
+/* `.tag`'s metrics, copied: 4px/10px of padding, a 15px line box and the 0.5px
+   transparent border add up to the pill's 25px in both states. */
+.fieldTag {
+  flex: none;
+  width: 108px;
+  padding: 4px 10px;
+  border: 0.5px solid transparent;
+  border-radius: 999px;
+  font-size: 10.5px;
+  line-height: 15px;
+  color: var(--dsw-alias-brand-primary);
+  background: color-mix(in srgb, var(--wb-business) 22%, transparent);
+}
+
+.field::placeholder {
+  color: var(--wb-caption);
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* The empty description is italic while displayed (`.descEmpty`), so its
+   placeholder is too; the empty tag keeps the upright caption of the dashed pill. */
+.field.fieldDesc::placeholder {
+  font-style: italic;
+}
+
+.editHint {
+  margin: 6px 0 0;
+  color: var(--wb-caption);
+  font-size: 10px;
+}
+
+/* ------------------------------------------------------------ detail area */
+
+/*
+ * The expanded area is indented to the body column — 42px from the card's edge,
+ * which is 28px here because the card already carries 14px of padding.
+ *
+ * It draws no rule of its own: the labelled divider at its top is the expanded
+ * area's one line (§5.4), and that divider is always rendered — a border here
+ * plus the divider 12px below it would be the second line that decision forbids.
+ *
+ * The two numbers around that line are the prototype's: 12px from the card's own
+ * bottom padding plus 2px here above it, and the divider's own 12px below. Only
+ * 2px are added here, which is why this margin is not the 14px it once was — with
+ * the divider as the first child, a margin-top measured against the card's edge
+ * would have added to those 12px instead of completing them, and the gap above
+ * the line came out at 26px. 14px above, 12px below is the prototype's own
+ * arithmetic (`.cardMain` 12 + `.detail` 2).
+ */
+
+/* The card's height change is the card's own animation (§9.18). The region stays
+   mounted — an unmounted subtree cannot transition — and folds through its grid
+   row, the one way to animate into `auto` height. `--wb-jelly` lets the row
+   overshoot its final size before settling, and the cards below follow it. */
+.detailWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  /* Closing is quicker than opening: the fold should feel hurried, the spring seen. */
+  transition: grid-template-rows 240ms var(--wb-jelly);
+}
+
+/* Clipped, and hidden rather than unmounted: a collapsed card must not leave a
+   focusable delete button behind the fold. `visibility` waits for the fold.
+   §9.27: the height cap lives HERE, on the always-matching rule, not on the
+   open-state one — a cap that left with the class would also leave at the
+   instant the fold begins, and the row's interpolated start point would jump
+   from the capped height to the uncapped content height, making the card
+   suddenly taller while the list scrollbar flickers. Capped at every style,
+   the fold starts from the height the open state actually had. */
+.detailWrap > .detail {
+  overflow: hidden;
+  min-height: 0;
+  max-height: 50cqh;
+  visibility: hidden;
+  transition: visibility 0s linear 240ms;
+}
+
+.detailOpen {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 380ms var(--wb-jelly);
+}
+
+.detailOpen > .detail {
+  visibility: visible;
+  transition: visibility 0s;
+  /* §9.27: the inner scroll of the cap is open-state-only, while the cap itself
+     is permanent. On the closing click this reverts to the base rule's
+     `overflow: hidden`, so the fold clips instead of scrolling — a collapsing
+     area with `overflow-y: auto` would flash its own scrollbar mid-fold. */
+  overflow-y: auto;
+  overflow-x: clip;
+}
+
+.detail {
+  padding: 2px 0 2px 28px;
+}
+
+/*
+ * The expanded area's footer row — the prototype's `.detailBar`. Only its trailing
+ * control is left: delete sits in the open card's bottom-right corner, where the
+ * prototype puts it. The write-back request used to lead this row and moved up to
+ * the heading line (§9.13), which is why the row needs nothing but `flex-end` now:
+ * a destructive control belongs where reaching it costs a gesture, and a request
+ * the user may want without opening anything does not.
+ */
+.detailBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/*
+ * The write-back request, at the trailing end of the card's heading line (§9.13).
+ *
+ * It was a filled 30px pill in the expanded area with the label "生成总结并写回" on
+ * it. Three things changed: the label became a tooltip (`writeback.request` /
+ * `writeback.retry`), the control became a 24px icon so it can stand beside the
+ * send control without the heading line cutting a button-shaped hole in the title's
+ * width, and it moved up so it can be pressed without opening the card. `-8px` eats
+ * the row's 10px gap down to the 2px the foot's icon pair uses; `-4px` is the
+ * trailing overhang the send control used to carry, since this control now holds
+ * that edge; the `-3px` above and below is the send control's own trick for sitting
+ * level with the title's baseline.
+ */
+.writeBack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: -3px -4px -3px -8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wb-caption);
+  cursor: pointer;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.writeBack:hover {
+  background: var(--wb-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+/*
+ * In progress: the lens takes the brand colour, and it is the only thing in the row
+ * that does. That is the whole point of it — the retry edge (§4.5) has to look
+ * different from a first request at a glance, without a second label appearing and
+ * without the control changing size.
+ */
+.writeBackBusy {
+  color: var(--wb-business);
+}
+
+.writeBackBusy:hover {
+  color: var(--wb-business);
+}
+
+/*
+ * Sent, waiting for the model (§9.19). The third state of the same control, and
+ * the only one where the click has already happened: the lens keeps the retry
+ * tint and breathes, so the row says "still working" without a spinner, a label,
+ * or any change in size. Markup disables it as well, which is what stops a second
+ * request from queueing the same prompt twice (§11.4) — so the hover light-up is
+ * cancelled here rather than left to look like a live control.
+ */
+.writeBackPending {
+  color: var(--wb-business);
+  cursor: default;
+  animation: wb-writeback-wait 1600ms ease-in-out infinite;
+}
+
+.writeBackPending:hover {
+  background: transparent;
+  color: var(--wb-business);
+}
+
+@keyframes wb-writeback-wait {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.writeBack:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .writeBack {
+    transition: none;
+  }
+
+  /* Still visibly "not clickable yet", just held still instead of breathing. */
+  .writeBackPending {
+    opacity: 0.55;
+    animation: none;
+  }
+}
+
+/*
+ * The same 24px icon button as the card foot's controls — 8px radius, caption ink,
+ * 13px glyph — with the label dropped, so the pane's destructive control is not
+ * the one shape that stands out. It is always visible here: opening the card is
+ * already what holds it back, and the click is confirmed on top. The -4px pulls it
+ * into the column the foot's chevron occupies, which carries the same overhang.
+ */
+.detailDelete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-right: -4px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wb-caption);
+  cursor: pointer;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.detailDelete:hover {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.detailDelete:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detailDelete {
+    transition: none;
+  }
+}
+
+/*
+ * The write-back's next step, said in words (§9.19). Same size and ink as the
+ * empty-completion line it sits beside, because it is the same kind of text — a
+ * note about the section, not content in it — and it is separated from the
+ * section by the space above the bar rather than by another rule (at most one
+ * rule in the expanded area, §5.4).
+ */
+.detailHint {
+  margin: 12px 0 0;
+  color: var(--wb-caption);
+  font-size: 10.5px;
+}
+
+.detailEmpty {
+  margin: 0;
+  color: var(--wb-caption);
+  font-size: 10.5px;
+}
+
+.completionDivider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--wb-caption);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.completionDivider::before,
+.completionDivider::after {
+  content: '';
+  flex: 1;
+  height: 0.5px;
+  background: var(--dsw-alias-border-l1);
+}
+
+.completionSummary {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11.5px;
+  line-height: 19px;
+  overflow-wrap: anywhere;
+}
+
+.completionBlockTitle {
+  margin: 0 0 6px;
+  color: var(--wb-caption);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.completionBlock {
+  margin: 13px 0 0;
+}
+
+.completionList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  line-height: 17px;
+}
+
+/*
+ * The implementation path, as an ordered walk.
+ *
+ * Numbered rather than bulleted because the order IS the information: the list
+ * records the route that was taken, and a reader comparing two completions is
+ * comparing sequences.
+ */
+.completionSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 17px;
+}
+
+.completionSteps li::marker {
+  color: var(--wb-caption);
+}
+
+.completionRow {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+}
+
+.filePath {
+  color: var(--dsw-alias-label-primary);
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+}
+
+.filePurpose {
+  color: var(--wb-tertiary);
+  font-size: 10.5px;
+}
+
+.verifyCmd {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+}
+
+.verifyResult {
+  flex: none;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.verifyPassed {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.verifyFailed {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.verifySkipped {
+  color: var(--wb-caption);
+}
+
+.completionBy {
+  margin: 11px 0 0;
+  color: var(--wb-caption);
+  font-size: 10px;
+}
+
+/* ------------------------------------------------------- loading and empty */
+
+.status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--wb-caption);
+}
+
+.statusError {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+/* The prototype's `.btn`, which this pane's only plain button mirrors. */
+.retryBtn {
+  align-self: flex-start;
+  margin-top: 8px;
+  height: 30px;
+  padding: 0 13px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 130ms ease;
+}
+
+.retryBtn:hover {
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.retryBtn:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+/* No prototype counterpart; the banner is set in the ported scale. */
+.notice {
+  margin: 0 0 9px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12.5px;
+  line-height: 19px;
+}
+
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.skeleton {
+  height: 62px;
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-layer-1);
+  animation: wb-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes wb-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+
+  .card,
+  .chevron,
+  .chevron svg,
+  .chip,
+  .detailWrap,
+  .detailWrap > .detail,
+  .fieldDesc,
+  .iconBtn,
+  .retryBtn,
+  .searchField {
+    transition: none;
+  }
+
+  /* The press squash is motion, not a state: off, not shorter. */
+  .chevron:active svg {
+    scale: none;
+  }
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+/* Prototype `.emptyGlyph`, above the sentence rather than beside it. */
+.emptyGlyph {
+  margin-bottom: 14px;
+  color: var(--wb-caption);
+}
+
+.empty p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--wb-tertiary);
+}
+
+/*
+ * `.empty p` above is a type-qualified descendant selector, so it outweighs a
+ * bare class. Repeating the pane ancestor beats it on specificity without
+ * escalating to `!important`.
+ */
+.pane .emptyHint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--wb-caption);
+}

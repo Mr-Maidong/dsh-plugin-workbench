@@ -1,0 +1,22 @@
+{
+  // Client-face aggregate. It contributes the browser program to `tsc -b`; the
+  // package declares no `@Remote` surface on the browser half, so there is no
+  // client-face artifact to generate. `@deepseek-ai/dsh-typert-generator` does
+  // not run in this build at all — see ../tsdown.config.ts for why, and keep the
+  // `tsconfig.host.json` sibling anchor: the generator locates its workspace by
+  // walking up to that filename, so both aggregates still need their place.
+  // Like the host anchor it extends a base so anything that later reads these
+  // sources reads them with the declared compiler options rather than
+  // TypeScript's defaults.
+  "extends": "./tsconfig.base.client.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rewriteRelativeImportExtensions": false
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/workbench/tsconfig.web.json"
+    }
+  ]
+}

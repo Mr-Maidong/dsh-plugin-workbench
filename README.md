@@ -41,8 +41,9 @@ resolves prerelease ranges unpredictably, so a range would install a mix of vers
 dsh plugin --profile desktop add git+https://github.com/Mr-Maidong/dsh-plugin-workbench.git
 ```
 
-pnpm clones the repository and runs its `prepare` script, which builds `packages/workbench/lib`
-on the spot — the built output is intentionally not committed.
+pnpm fetches the repository as a tarball. The built `packages/workbench/lib` is committed, so
+the install needs no build step — which also matters because pnpm blocks build scripts for
+git-hosted packages unless each exact tarball URL is allowlisted in the profile.
 
 ### From a local clone
 
@@ -89,6 +90,9 @@ pnpm build          # tsc + tsdown for the Host half and the browser half
 pnpm test           # 113 tests / 21 suites on Node's built-in runner
 pnpm typecheck
 ```
+
+`packages/workbench/lib` is committed because that is what an install consumes: rebuild it and
+commit it together with any source change, or a fresh install keeps loading the old output.
 
 - Host half: `packages/workbench/src/index.ts` → `lib/index.js`.
 - Browser half: `packages/workbench/src/client/**` → `lib/client.js`.

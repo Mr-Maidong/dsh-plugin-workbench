@@ -48,7 +48,9 @@ point」的实现**，于是把 junction 当成了目录本身，进到仓库里
 - 所有文件必须是 LF。检查：`[IO.File]::ReadAllBytes($f) -contains 13` 必须为
   `False`。
 - `packages/workbench/lib` 是构建产物，不要手改；测试断言直接读它，所以改源码后
-  必须先构建再测。
+  必须先构建再测。它**入库**：安装消费的就是它，而对 git 托管的包 pnpm 默认禁止
+  执行构建脚本（除非把精确 tarball URL 加进 profile 的 allowBuilds），所以仓库自带
+  产物、安装零构建。改源码必须 `pnpm build` 后一起提交，否则新安装拿到旧产物。
 - CSS Module 类名带 `SWF62W_` 前缀，测试按这个前缀取样式。
 - 改动生效方式：客户端改动刷新页面即可；Host 改动、`package.json`、
   `cordis.patch.yml` 改动必须重启 DSH。

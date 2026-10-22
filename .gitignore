@@ -1,9 +1,11 @@
-# Build output: `prepare` rebuilds it on install from git, `pnpm build` locally.
-packages/workbench/lib/
-*.tsbuildinfo
-
 # Dependencies
 node_modules/
+
+# TypeScript incremental state. The shipped build artifacts under
+# packages/workbench/lib ARE committed: pnpm refuses to run build scripts for a
+# git-hosted package unless the exact tarball URL is allowlisted in the profile,
+# so the repo carries the built output and an install needs no build step.
+*.tsbuildinfo
 
 # Editor / OS noise
 .DS_Store

@@ -36,8 +36,9 @@ DSH 的 peer 依赖刻意锁死到精确的 `0.2.1-rc.2`：pnpm 解析预发布�
 dsh plugin --profile desktop add git+https://github.com/Mr-Maidong/dsh-plugin-workbench.git
 ```
 
-pnpm 会克隆仓库并执行它的 `prepare` 脚本，当场构建 `packages/workbench/lib` —— 构建产物
-故意不入库。
+pnpm 以 tarball 形式取仓库。构建产物 `packages/workbench/lib` 已入库，所以安装时不需要构建
+—— 这一点也有实际原因：对 git 托管的包，pnpm 默认禁止执行构建脚本，除非把每个精确的
+tarball URL 加进 profile 的 allowlist。
 
 ### 从本地克隆装
 
@@ -79,6 +80,9 @@ pnpm build          # Host 半边与浏览器半边分别 tsc + tsdown
 pnpm test           # Node 内置测试运行器：113 tests / 21 suites
 pnpm typecheck
 ```
+
+`packages/workbench/lib` 是入库的，因为安装消费的就是它：改完源码要重新构建并一起提交，否则
+新安装拿到的还是旧产物。
 
 - Host 半边：`packages/workbench/src/index.ts` → `lib/index.js`。
 - 浏览器半边：`packages/workbench/src/client/**` → `lib/client.js`。

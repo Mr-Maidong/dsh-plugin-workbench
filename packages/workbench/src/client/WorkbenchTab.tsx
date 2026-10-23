@@ -427,7 +427,9 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
               type="button"
               className={[
                 css.chip,
-                (tier === 'all' || tier === 'active') && css.chipFlat,
+                // §9.35: the two record tiers keep a standing tint when unselected.
+                tier === 'done' && css.chipDone,
+                tier === 'archived' && css.chipArchived,
                 tier === snapshot.filter && css.chipActive,
               ].filter(Boolean).join(' ')}
               onClick={() => {

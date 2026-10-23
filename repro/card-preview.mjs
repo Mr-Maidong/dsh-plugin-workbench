@@ -210,10 +210,26 @@ const scrolled = card({
   long: true,
 })
 
-const column = (body, theme, width = 380, height = 420) => `
+/** The filter row: the four tiers, with one of them optionally current. */
+const chips = (active = '') => `<div class="${cls('toolbar')}">
+  <div class="${cls('filterRow')}" style="margin-top:0">
+    ${[
+    ['全部', 9, 'all'],
+    ['未完成', 4, 'active'],
+    ['已完成', 5, 'done'],
+    ['已归档', 2, 'archived'],
+  ].map(([label, count, tier]) => `<button type="button" class="${cls('chip',
+    tier === 'done' && 'chipDone',
+    tier === 'archived' && 'chipArchived',
+    tier === active && 'chipActive')}">${label}<span class="${cls('chipCount')}">${count}</span></button>`).join('')}
+  </div>
+</div>`
+
+const column = (body, theme, width = 380, height = 420, head = '') => `
   <section class="col" data-theme="${theme}" style="width:${width + 32}px">
     <p class="colTitle">${theme === 'light' ? '浅色' : '深色'} · 面板 ${width}px</p>
     <div class="${cls('pane')}" style="height:${height}px">
+      ${head}
       <div class="${cls('scroller')}">
         <ul class="${cls('list')}">${body}</ul>
       </div>
@@ -241,6 +257,11 @@ const html = `<!doctype html>
     ${column(cards + scrolled, 'light', 380, 620)}
     ${column(composer + busy + openCards + archived, 'light', 380, 860)}
     ${column(composer + cards + busy, 'dark', 380, 620)}
+  </div>
+  <div class="cols" style="margin-top:24px">
+    ${column('', 'light', 380, 120, chips(''))}
+    ${column('', 'light', 380, 120, chips('done'))}
+    ${column('', 'dark', 380, 120, chips('archived'))}
   </div>
   <div class="cols" style="margin-top:24px">
     ${column(busy, 'light', 320)}

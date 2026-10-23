@@ -309,7 +309,9 @@ export function WorkbenchTab(props) {
     const tiers = ['all', 'active', 'done', 'archived'];
     return (_jsxs("div", { className: css.pane, children: [_jsxs("div", { className: css.toolbar, children: [_jsx("div", { className: css.searchRow, children: _jsxs("label", { className: css.searchField, children: [_jsx(SearchGlyph, {}), _jsx("input", { className: css.searchInput, type: "search", value: snapshot.query, placeholder: t('search.placeholder'), onChange: event => { store.setQuery(event.target.value); } })] }) }), _jsxs("div", { className: css.filterRow, children: [tiers.map(tier => (_jsxs("button", { type: "button", className: [
                                     css.chip,
-                                    (tier === 'all' || tier === 'active') && css.chipFlat,
+                                    // §9.35: the two record tiers keep a standing tint when unselected.
+                                    tier === 'done' && css.chipDone,
+                                    tier === 'archived' && css.chipArchived,
                                     tier === snapshot.filter && css.chipActive,
                                 ].filter(Boolean).join(' '), onClick: () => {
                                     setEditing({ kind: 'none' });

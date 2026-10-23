@@ -48,7 +48,7 @@
   /* The strongest border tier the theme does not ship (the prototype's `border-l3`). */
   --wb-border-strong: color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
   /* Accent surface for the active filter chip and the tag pill. */
-  --wb-accent-wash: color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);
+  --wb-accent-wash: color-mix(in srgb, var(--dsw-alias-brand-primary) 9%, transparent);
 
   /*
    * The card's accent (§9.30).
@@ -181,7 +181,7 @@
   padding: 0 11px;
   border: 0.5px solid transparent;
   border-radius: 999px;
-  background: var(--dsw-alias-bg-layer-1);
+  background: transparent;
   color: var(--dsw-alias-label-secondary);
   font: inherit;
   font-size: 12.5px;
@@ -191,7 +191,7 @@
 }
 
 .chip:hover {
-  background: var(--dsw-alias-bg-layer-2);
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .chip:focus-visible {
@@ -199,13 +199,35 @@
   outline-offset: 1px;
 }
 
-.chipFlat {
-  height: 26px;
-  background: transparent;
+/*
+ * §9.35 — the two record tiers are tinted even when unselected.
+ *
+ * 全部 and 未完成 are the daily view: they carry no fill until they are the
+ * current filter, which keeps the row quiet. 已完成 and 已归档 are the two tiers
+ * the list is *not* usually on, so they get a standing tint of their own — a
+ * soft green for the finished one (the same accent the card already spends on its
+ * dot and pill) and a neutral grey for the filed-away one (filing is not an
+ * achievement). Both are two steps lighter than the washes the row used before:
+ * 9% and 6% instead of a solid `bg-layer-1`, which on the sidebar's fill read as
+ * no fill at all.
+ *
+ * Order matters: `.chipActive` comes last, so picking either tier still turns it
+ * into the one brand-coloured chip and the row keeps a single "you are here".
+ */
+.chipDone {
+  background: color-mix(in srgb, var(--wb-accent) 9%, transparent);
 }
 
-.chipFlat:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+.chipDone:hover {
+  background: color-mix(in srgb, var(--wb-accent) 14%, transparent);
+}
+
+.chipArchived {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);
+}
+
+.chipArchived:hover {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
 }
 
 .chipActive {
@@ -214,7 +236,7 @@
 }
 
 .chipActive:hover {
-  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 20%, transparent);
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 13%, transparent);
 }
 
 .chipCount {

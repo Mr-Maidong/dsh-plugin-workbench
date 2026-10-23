@@ -66,6 +66,35 @@ export declare class WorkbenchService extends TypertRemoteService {
      */
     private registerCompleteTool;
     /**
+     * Register every model-facing tool this plugin owns.
+     *
+     * `workbench_search` and `workbench_create` (DESIGN.md §9.34) are thin
+     * projections of the Remote methods, so a model and the pane share one
+     * validator, one ranking, and one write path rather than two that can drift.
+     * `workbench_complete` stays the write-back route below.
+     * @param ctx - a Context with `tools` available.
+     */
+    private registerTools;
+    /**
+     * The workspace whose session account holds `sessionId`.
+     *
+     * The registry is the only place that knows which directory a session works
+     * in, and a tool has no other handle on it: the model cannot see workspace
+     * ids, so the tool call resolves one from the session it runs under. The
+     * account is header-validated (cwd must equal the workspace path), which is
+     * why this is not merely a first-registered-workspace guess.
+     * @param sessionId - the calling agent's session id.
+     * @returns the owning workspace, or `undefined` when no workspace claims it
+     *   (a subagent session, for example).
+     */
+    private workspaceOfSession;
+    /**
+     * Look up an explicit `workspaceId` tool argument.
+     * @param workspaceId - the durable id the call passed.
+     * @returns the workspace, or `undefined` when the registry does not know it.
+     */
+    private workspaceById;
+    /**
      * Remember the version a write-back request observed.
      *
      * Called on both edges of the request, because the guard has to cover the

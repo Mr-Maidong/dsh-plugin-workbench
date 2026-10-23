@@ -27,6 +27,8 @@ import { queryWords, scoreItem } from './fuzzy.ts'
 import { planRequestComplete } from './state.ts'
 import type { RequestCompletePlan } from './state.ts'
 import { workbenchDomain } from './storage.ts'
+import { workbenchCreateTool, workbenchSearchTool } from './tools.ts'
+import type { WorkbenchToolHost, WorkbenchToolWorkspace } from './tools.ts'
 import type {
   WorkItemId, WorkItemRecord, WorkbenchArchiveRequest, WorkbenchCompletionInput,
   WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchProbeValue,
@@ -160,8 +162,8 @@ export class WorkbenchService extends TypertRemoteService {
     }, 'workbench: storage domain')
     // The tool registry is optional, and registered through `inject` rather than
     // `static inject` so a profile without it still gets the whole tab: the only
-    // thing lost is a model's ability to write a completion back.
-    ctx.inject(['tools'], scoped => { this.registerCompleteTool(scoped) })
+    // thing lost is a model's ability to read, create, and complete work items.
+    ctx.inject(['tools'], scoped => { this.registerTools(scoped) })
   }
 
   /**
@@ -266,6 +268,58 @@ export class WorkbenchService extends TypertRemoteService {
         }
       },
     }))
+  }
+
+  /**
+   * Register every model-facing tool this plugin owns.
+   *
+   * `workbench_search` and `workbench_create` (DESIGN.md §9.34) are thin
+   * projections of the Remote methods, so a model and the pane share one
+   * validator, one ranking, and one write path rather than two that can drift.
+   * `workbench_complete` stays the write-back route below.
+   * @param ctx - a Context with `tools` available.
+   */
+  private registerTools(ctx: Context): void {
+    const host: WorkbenchToolHost = {
+      search: request => this.search(request),
+      create: request => this.create(request),
+      workspaceOfSession: sessionId => this.workspaceOfSession(sessionId),
+      workspaceById: workspaceId => this.workspaceById(workspaceId),
+    }
+    ctx.tools.register(workbenchSearchTool(host))
+    ctx.tools.register(workbenchCreateTool(host))
+    this.registerCompleteTool(ctx)
+  }
+
+  /**
+   * The workspace whose session account holds `sessionId`.
+   *
+   * The registry is the only place that knows which directory a session works
+   * in, and a tool has no other handle on it: the model cannot see workspace
+   * ids, so the tool call resolves one from the session it runs under. The
+   * account is header-validated (cwd must equal the workspace path), which is
+   * why this is not merely a first-registered-workspace guess.
+   * @param sessionId - the calling agent's session id.
+   * @returns the owning workspace, or `undefined` when no workspace claims it
+   *   (a subagent session, for example).
+   */
+  private workspaceOfSession(sessionId: string): WorkbenchToolWorkspace | undefined {
+    for (const workspace of this.ctx.workspaceRegistry.list()) {
+      if (workspace.sessionIds.some(id => String(id) === sessionId)) {
+        return { id: String(workspace.id), path: workspace.path }
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Look up an explicit `workspaceId` tool argument.
+   * @param workspaceId - the durable id the call passed.
+   * @returns the workspace, or `undefined` when the registry does not know it.
+   */
+  private workspaceById(workspaceId: string): WorkbenchToolWorkspace | undefined {
+    const workspace = this.ctx.workspaceRegistry.get(WorkspaceId(workspaceId))
+    return workspace === undefined ? undefined : { id: String(workspace.id), path: workspace.path }
   }
 
   /**

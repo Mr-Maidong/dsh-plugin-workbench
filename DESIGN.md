@@ -41,7 +41,7 @@ point」的实现**，于是把 junction 当成了目录本身，进到仓库里
 | pnpm | `…\dependencies\pnpm\bin\pnpm.mjs`（工作区 11.7.0 / 应用内置 11.28.5） |
 | CLI | `…\win-unpacked\resources\runtime\cli\bin\dsh.cmd` |
 | 注册表 | `https://registry.npmmirror.com` |
-| 构建 + 测试 | `pnpm test` → 当前 **113 tests / 21 suites**，全绿 |
+| 构建 + 测试 | `pnpm test` → 当前 **139 tests / 28 suites**，全绿 |
 
 约定：
 
@@ -398,6 +398,57 @@ node repro/serve.mjs 47811        # http://localhost:47811/repro/card-preview.ht
 - `prefers-reduced-motion` 下折叠本身没有过渡（`.detailWrap` 的 transition 被关掉），延迟
   交接就只是白等 400ms，所以在那个块里直接 `animation: none; overflow-y: auto`。
 
+## §9.34 P4：查询与创建两个模型工具
+
+**需求来源**：右栏工作台在 2026-10-22 建的两条待办 ——「插件提供工作项查询工具调用」和
+「插件提供工作项创建工具调用」。P4（模型工具）原本整条挂在 §13.8 的欠账里，这次只补
+这两条；模型侧的更新、归档、删除工具仍没有。
+
+### 9.34.1 形态：Remote 的薄投影，而不是第二套实现
+
+`src/tools.ts` 构造 `workbench_search` / `workbench_create` 两个 `defineTool` 定义，
+由 `WorkbenchService.registerTools` 注册；第三个工具 `workbench_complete` 留在原处
+（§11.3），注册入口从 `registerCompleteTool` 改为 `registerTools`。
+
+- 查询工具调的就是 `this.search`，创建工具调的就是 `this.create`：参数校验、模糊三档
+  排序、四档计数、「永远是 `open`」、工作区归属检查都只有一份实现。模型看到的排序与
+  计数因此就是面板上的排序与计数，不会因为多一条工具路径而漂移。
+- 工具层唯一新增的判断是「这次调用作用在哪个工作区」。模型拿不到 workspace id，默认
+  从调用会话解析：在 `workspaceRegistry.list()` 里找 `sessionIds` 含该会话的那个工作区
+  （该账户经过 header cwd 校验，不是「第一个工作区」）。显式 `workspaceId` 是逃生口，
+  供子代理、脚本这类没有工作区归属的调用使用。
+- 解析失败一律报错，不退化：未知 `workspaceId` 报 `unknown workspace`，没有会话也没给
+  id 报「需要 agent session」，会话不属于任何工作区报「未挂到工作区」。**绝不**把作用域
+  悄悄放大到所有工作区 —— 那会把别的项目的待办当成这个项目的，而静默写错位置的创建更糟。
+
+### 9.34.2 契约
+
+| 工具 | 参数 | 默认 / 约束 |
+| --- | --- | --- |
+| `workbench_search` | `query`、`status[]`、`tag`、`archived`、`limit`、`offset`、`workspaceId` | `query` 省略即全量；`archived` 默认 `exclude`（取 `only` 才看归档）；`limit` 默认 50、上限 200，与 Remote 的 clamp 一致；`status` 传 `["open","in_progress"]` 即「未完成」 |
+| `workbench_create` | `title`（必填）、`desc`、`tag`、`workspaceId` | 状态、归档、完成记录都不是输入：创建只能是 `open` |
+
+返回值是 canonical value（不是拼给人看的字符串）：查询返回
+`workspaceId/workspacePath/total/counts/items`，`items` 带 `id`、标题、`desc`、`tag`、
+`status`、`archived`、`updateAt`、`createdAt` —— `id` 是后续 `workbench_complete` 唯一
+认得的句柄。渲染只是它的一个投影：`[ ]`/`[x]`、四档计数行、每行的 `id` 与更新时间。
+
+两条容易做错、已被测试钉住的细节：
+
+- 空结果仍打印计数行。只显示「0 条」会被读成「工作台是空的」，而实际只是查询没命中。
+- 创建工具不把 Host 的 `invalid` 包成成功，也不把 `not_found`/`conflict` 当成创建已完成：
+  create 面向一条尚不存在的记录，这两种码出现就说明存储层答非所问，应当报错而不是编一个
+  成功。
+
+并发标注按实际语义给：`workbench_search` 读快照，标 `isConcurrencySafe`；`workbench_create`
+走写路径，不标。
+
+### 9.34.3 复验
+
+`pnpm test` → **139 tests / 28 suites**。新增的 `tests/tools.spec.ts` 有 15 条，覆盖作用域
+解析（会话工作区、显式 id、未知 id、无会话、未挂载会话）、可选参数省略、Host 拒绝透传、
+输出 schema 校验、渲染文本、以及服务确实注册了三个工具。Host 改动要重启 DSH 才生效。
+
 ## §13.8 遗留欠账
 
 - `dsh.client.inject` 不一致：客户端源码 import 了
@@ -408,11 +459,13 @@ node repro/serve.mjs 47811        # http://localhost:47811/repro/card-preview.ht
   不存在）。
 - 没有「工作项 → 快捷键」入口；短 id 解析（用户输入前缀匹配）未实现。
 - 没有 `tsconfig.test.json`，测试文件靠 `tsc -b` 的 include 边界兜住。
-- 路线图未做：P4 模型工具、P6 工作区删除后的归档、P7 可选项、P8 回合中止。注意 §9.31.4
+- 路线图未做：P6 工作区删除后的归档、P7 可选项、P8 回合中止。P4 的查询/创建两个模型工具
+  已在 §9.34 补上，模型侧的更新、归档、删除等其余写工具仍未做。注意 §9.31.4
   之后「归档」这一档已经有用户动作在写了，P6 补的是另一个来源（工作区被删），两者共用
   `archived` 一个字段。
-- `delete` Remote 现在没有面板入口了（§9.31.4 用归档取代了它），只剩模型工具在用。留着
-  是为了那条路径仍然完整；若确认不再需要，可以连同 `TrashGlyph` 时代的清理一起删。
+- `delete` Remote 现在既没有面板入口（§9.31.4 用归档取代了它），也没有模型工具调用它；
+  留着是为了那条 Remote 路径仍然完整。若确认不再需要，可以连同 `TrashGlyph` 时代的清理
+  一起删。
 - 上游限制：Typert 生成器不能分析 monorepo 外的插件，`typert.host.ts` /
   `typert.remote-client.ts` 因此手写，靠 `remote-contract.spec.ts` 防漂移。
 - 插件安装在 profile 里用 `link:`，卸载/重建 profile 可能再次删到仓库（§0）。

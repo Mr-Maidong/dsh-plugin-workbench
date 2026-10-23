@@ -79,6 +79,12 @@ export const TYPERT = {
           signature: "@Remote('delete') delete(request: WorkbenchDeleteRequest): Promise<WorkbenchDeleteValue>",
           summary: 'Delete one work item.',
         },
+        {
+          kind: 'method',
+          name: 'watch',
+          signature: "@Remote({ mode: 'stream' }) watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>",
+          summary: 'Stream one notice per write so an open pane can re-read its list.',
+        },
       ],
       types: [
         {
@@ -140,6 +146,10 @@ export const TYPERT = {
         {
           name: 'WorkbenchDeleteValue',
           declaration: "export type WorkbenchDeleteValue = { readonly code: 'ok'; readonly id: string } | { readonly code: 'not_found'; readonly id: string } | { readonly code: 'conflict'; readonly current: WorkItemRecord }",
+        },
+        {
+          name: 'WorkbenchChange',
+          declaration: 'export interface WorkbenchChange { readonly workspaceId: string; readonly revision: number; readonly at: string }',
         },
       ],
     }],

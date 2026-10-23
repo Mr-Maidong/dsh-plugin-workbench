@@ -10,7 +10,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
-import type { WorkbenchArchiveRequest, WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchProbeValue, WorkbenchRequestCompleteRequest, WorkbenchSearchRequest, WorkbenchSearchValue, WorkbenchSetDescRequest, WorkbenchUpdateRequest, WorkbenchWriteValue } from './types.ts';
+import type { WorkbenchArchiveRequest, WorkbenchChange, WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchProbeValue, WorkbenchRequestCompleteRequest, WorkbenchSearchRequest, WorkbenchSearchValue, WorkbenchSetDescRequest, WorkbenchUpdateRequest, WorkbenchWriteValue } from './types.ts';
 export type * from './types.ts';
 declare module '@deepseek-ai/cordis' {
     interface Context {
@@ -39,6 +39,14 @@ export declare class WorkbenchService extends TypertRemoteService {
      * correct direction: the user's own text is never silently replaced.
      */
     private readonly writeBacks;
+    /**
+     * The write bus every open pane watches (§9.36).
+     *
+     * It lives on the service rather than in a module global because it must die
+     * with the service: a reloaded plugin publishing into an orphaned bus would
+     * feed watchers that belong to the previous generation.
+     */
+    private readonly changes;
     /**
      * @param ctx - Host services owning the storage hub and the workspace registry.
      */
@@ -216,6 +224,22 @@ export declare class WorkbenchService extends TypertRemoteService {
      * @throws when the domain could not be opened.
      */
     delete(request: WorkbenchDeleteRequest): Promise<WorkbenchDeleteValue>;
+    /**
+     * Stream one notice per write until the caller goes away (§9.36).
+     *
+     * This is the Host's half of "the list keeps up on its own". A pane opens this
+     * once and re-reads `search` when a notice arrives, which is what makes a
+     * model's tool call (`workbench_create`, `workbench_complete`) show up without
+     * the user pressing 刷新 — the tool writes through the same methods this bus
+     * announces, so there is no second write path to remember to notify from.
+     *
+     * Cancellation is the carrier's: `signal` is filled in by the Gateway from the
+     * logical stream, so a closed tab ends the generator instead of leaving it
+     * parked on a promise.
+     * @param signal - cancellation owned by the Remote stream carrier.
+     * @returns the Host's change notices, oldest first.
+     */
+    watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>;
     /**
      * The open domain's item table.
      * @returns the table handle.

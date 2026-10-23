@@ -4057,7 +4057,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return /* @__PURE__ */ _superRefine(fn, params);
 		}
 		//#endregion
-		//#region packages/workbench/lib/typert.contract-BCQpTL2y.js
+		//#region packages/workbench/lib/typert.contract-mNsUgZm4.js
 		/**
 		* The wire contract between the Host service and the browser half.
 		*
@@ -4293,6 +4293,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				current: workItemRecordSchema()
 			}).readonly()
 		]));
+		/**
+		* Mirrors {@link WorkbenchChange}, the notice `watch` streams.
+		*
+		* Strict about all three fields because a notice has no partial reading: a bare
+		* `workspaceId` would leave the pane unable to tell a coalesced duplicate from a
+		* fresh write, and `at` must be a timestamp for a diagnostic log to sort.
+		* `workspaceId` is required to be non-empty here even though the Host refuses to
+		* publish one, so a malformed notice fails at the boundary rather than starting
+		* a re-read of nothing.
+		*/
+		const changeSchema = lazy(() => object({
+			workspaceId: string().min(1),
+			revision: number().int().positive(),
+			at: string()
+		}).readonly());
 		//#endregion
 		//#region packages/workbench/lib/typert.remote-client.js
 		/**
@@ -4400,6 +4415,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					invocation: { kind: "direct" },
 					parameters: [param("request", "WorkbenchDeleteRequest", deleteRequestSchema)],
 					result: codec("WorkbenchDeleteValue", deleteValueSchema)
+				},
+				{
+					id: `${PACKAGE_NAME}#${SERVICE_KEY}/watch`,
+					service: SERVICE_KEY,
+					namespace: SERVICE_KEY,
+					method: "watch",
+					invocation: { kind: "direct" },
+					mode: "stream",
+					parameters: [],
+					cancellation: { parameter: "signal" },
+					result: codec("WorkbenchChange", changeSchema)
 				}
 			]
 		};
@@ -6392,6 +6418,68 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			};
 		}
 		//#endregion
+		//#region packages/workbench/lib/types/client/changes.js
+		/** How many times in a row a dead stream is reopened before the follower stops. */
+		const MAX_ATTEMPTS = 8;
+		/** First backoff step; doubles per failed attempt up to {@link MAX_BACKOFF_MS}. */
+		const FIRST_BACKOFF_MS = 250;
+		/** Ceiling on the retry delay, so a long outage does not stretch waits forever. */
+		const MAX_BACKOFF_MS = 4e3;
+		/** The delay before attempt number `attempt` (1-based). */
+		function backoff(attempt) {
+			return Math.min(MAX_BACKOFF_MS, FIRST_BACKOFF_MS * 2 ** (attempt - 1));
+		}
+		/**
+		* Sleep, but wake immediately on abort.
+		*
+		* A plain `setTimeout` promise would hold the follower open for up to
+		* {@link MAX_BACKOFF_MS} after the plugin was disposed, and the abort listener it
+		* leaked would keep the old copy of this function alive with it.
+		* @param ms - how long to wait.
+		* @param signal - plugin lifetime.
+		*/
+		function wait(ms, signal) {
+			return new Promise((resolve) => {
+				const timer = setTimeout(done, ms);
+				function done() {
+					clearTimeout(timer);
+					signal.removeEventListener("abort", done);
+					resolve();
+				}
+				signal.addEventListener("abort", done, { once: true });
+			});
+		}
+		/**
+		* Re-read the panes a notice names, and keep doing so until the plugin is gone.
+		* @param options - the stream opener, the panes, and the lifetime signal.
+		* @returns why the loop ended; never rejects.
+		*/
+		async function followChanges(options) {
+			const { signal } = options;
+			const sleep = options.wait ?? wait;
+			let reconnect = false;
+			let attempt = 0;
+			while (!signal.aborted) {
+				if (reconnect) for (const target of options.targets()) target.refresh();
+				reconnect = true;
+				try {
+					for await (const change of options.open()) {
+						if (signal.aborted) return "aborted";
+						attempt = 0;
+						for (const target of options.targets()) if (target.workspaceId !== "" && target.workspaceId === change.workspaceId) target.refresh();
+					}
+				} catch (error) {
+					if (signal.aborted) return "aborted";
+					options.onError?.(error);
+				}
+				if (signal.aborted) return "aborted";
+				attempt += 1;
+				if (attempt > MAX_ATTEMPTS) return "gave-up";
+				await sleep(backoff(attempt), signal);
+			}
+			return "aborted";
+		}
+		//#endregion
 		//#region packages/workbench/lib/types/client/locales.js
 		/**
 		* Workbench tab, toolbar, list, and detail copy.
@@ -6715,6 +6803,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			};
 			const stores = /* @__PURE__ */ new Map();
 			const workspaces = bindWorkspaceSource(ctx.workspaces.list);
+			let follower;
+			const startFollow = () => {
+				follower?.abort();
+				const remote = ctx.remote.workbench;
+				if (typeof remote.watch !== "function") {
+					ctx.logger.warn("workbench: the mounted Remote namespace has no watch method; the list updates only when opened or refreshed");
+					return;
+				}
+				const control = new AbortController();
+				follower = control;
+				followChanges({
+					open: () => remote.watch(),
+					targets: () => [...stores.values()],
+					signal: control.signal,
+					onError: (error) => ctx.logger.warn(`workbench: change stream failed: ${describe(error).message}`)
+				}).then((outcome) => {
+					if (outcome !== "gave-up" || control.signal.aborted) return;
+					ctx.logger.error("workbench: giving up on change notices — the list will only update on manual refresh");
+				});
+			};
+			startFollow();
+			ctx.effect(() => {
+				const off = ctx.on("connection/reset", startFollow);
+				return () => {
+					off();
+					follower?.abort();
+					follower = void 0;
+				};
+			}, "workbench: change stream");
 			const injected = () => ({
 				storeFor: (sessionId) => {
 					const existing = stores.get(sessionId);

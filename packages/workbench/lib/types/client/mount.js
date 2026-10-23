@@ -3,6 +3,8 @@ import { WorkbenchMenuItem } from "./WorkbenchMenu.js";
 import { WORKBENCH_KIND, WORKBENCH_MENU_ID, WORKBENCH_TAB_ID, workbenchTabDefinition } from "./definition.js";
 import { guardWorkbenchTab } from "./guard.js";
 import { WorkbenchStore } from "./store.js";
+import { describe } from "./store.js";
+import { followChanges } from "./changes.js";
 import { en, NS, zh } from "./locales.js";
 import { bindWorkspaceSource } from "./workspace-source.js";
 import { CLIENT_DEPS } from "./deps.js";
@@ -12,6 +14,7 @@ import { CLIENT_DEPS } from "./deps.js";
 // lookup as well as the text, so both are driven by `tests/write-back.spec.ts`
 // without React, a DOM, or the Remote.
 import { queueWriteBack } from "./write-back.js";
+export { followChanges } from "./changes.js";
 export { WorkbenchStore, filterToRequest, toMarkdown } from "./store.js";
 export { WORKBENCH_KIND, WORKBENCH_MENU_ID, WORKBENCH_TAB_ID, workbenchTabDefinition } from "./definition.js";
 export { guardWorkbenchTab, ruleWorkbenchTab } from "./guard.js";
@@ -100,6 +103,61 @@ function registerUi(ctx) {
     // prototype methods that read `this`, while React calls a
     // `useSyncExternalStore` pair with no receiver. See `workspace-source.ts`.
     const workspaces = bindWorkspaceSource(ctx.workspaces.list);
+    /*
+     * The Host's write notices, turned into a re-read of whichever pane is showing
+     * the workspace that changed (§9.36).
+     *
+     * One follower for the whole mount, not one per pane: the Host publishes a
+     * notice per write and each store decides for itself whether the notice names
+     * the workspace it is showing. That is what makes a *model* write appear —
+     * `workbench_create` and `workbench_complete` run Host-side with no Client
+     * call to hook, so nothing in the pane would otherwise know to look again.
+     *
+     * `follower` is replaced on every restart, so a stream left over from a dead
+     * connection generation is aborted rather than resumed; `startFollow` is
+     * idempotent from the caller's side.
+     */
+    let follower;
+    const startFollow = () => {
+        follower?.abort();
+        const remote = ctx.remote.workbench;
+        // A composition may provide `remote.workbench` itself (see `mountWorkbench`),
+        // and that provider need not be this version — it can be missing `watch`.
+        // Following a method that is not there would mean eight failures and a
+        // stack-shaped log; saying so once is the honest report.
+        if (typeof remote.watch !== 'function') {
+            ctx.logger.warn('workbench: the mounted Remote namespace has no watch method; the list updates only when opened or refreshed');
+            return;
+        }
+        const control = new AbortController();
+        follower = control;
+        void followChanges({
+            open: () => remote.watch(),
+            targets: () => [...stores.values()],
+            signal: control.signal,
+            onError: error => ctx.logger.warn(`workbench: change stream failed: ${describe(error).message}`),
+        }).then((outcome) => {
+            if (outcome !== 'gave-up' || control.signal.aborted)
+                return;
+            // Logged rather than retried forever: at this point the wire has failed
+            // eight times running, and a silent loop would hide that behind a list
+            // that merely looks quiet.
+            ctx.logger.error('workbench: giving up on change notices — the list will only update on manual refresh');
+        });
+    };
+    startFollow();
+    ctx.effect(() => {
+        // A new connection generation kills every stream opened on the old one, and
+        // the notices written during the gap are gone. Restarting with a fresh
+        // retry budget — and with the reconnect re-read `followChanges` performs —
+        // is what makes a Host restart recoverable instead of final.
+        const off = ctx.on('connection/reset', startFollow);
+        return () => {
+            off();
+            follower?.abort();
+            follower = undefined;
+        };
+    }, 'workbench: change stream');
     const injected = () => ({
         storeFor: (sessionId) => {
             const existing = stores.get(sessionId);

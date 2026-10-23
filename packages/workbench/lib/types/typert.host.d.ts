@@ -49,6 +49,11 @@ export declare const TYPERT: {
                 readonly name: "delete";
                 readonly signature: "@Remote('delete') delete(request: WorkbenchDeleteRequest): Promise<WorkbenchDeleteValue>";
                 readonly summary: "Delete one work item.";
+            }, {
+                readonly kind: "method";
+                readonly name: "watch";
+                readonly signature: "@Remote({ mode: 'stream' }) watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>";
+                readonly summary: "Stream one notice per write so an open pane can re-read its list.";
             }];
             readonly types: readonly [{
                 readonly name: "WorkItemStatus";
@@ -95,6 +100,9 @@ export declare const TYPERT: {
             }, {
                 readonly name: "WorkbenchDeleteValue";
                 readonly declaration: "export type WorkbenchDeleteValue = { readonly code: 'ok'; readonly id: string } | { readonly code: 'not_found'; readonly id: string } | { readonly code: 'conflict'; readonly current: WorkItemRecord }";
+            }, {
+                readonly name: "WorkbenchChange";
+                readonly declaration: "export interface WorkbenchChange { readonly workspaceId: string; readonly revision: number; readonly at: string }";
             }];
         }];
         readonly events: readonly [];

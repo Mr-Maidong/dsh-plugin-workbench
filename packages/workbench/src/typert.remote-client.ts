@@ -29,9 +29,10 @@
  * a future diff against generator output is about content and not formatting.
  */
 import { INVOCATIONS, PACKAGE_NAME } from './typert.contract.ts'
-import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
+import type { RemoteResult, RemoteStreamHandle, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
 import type {
   WorkbenchArchiveRequest,
+  WorkbenchChange,
   WorkbenchCreateRequest,
   WorkbenchDeleteRequest,
   WorkbenchDeleteValue,
@@ -54,6 +55,9 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     search: (request: WorkbenchSearchRequest) => Promise<RemoteResult<WorkbenchSearchValue>>
     setDesc: (request: WorkbenchSetDescRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
     update: (request: WorkbenchUpdateRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
+    // The one stream (§9.36): a handle rather than a promise, and `signal` last
+    // because the generator appends cancellation after the wire parameters.
+    watch: (signal?: AbortSignal) => RemoteStreamHandle<WorkbenchChange, never>
   }
   interface TypertRemoteMap {
     'workbench/archive': (request: WorkbenchArchiveRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
@@ -64,6 +68,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'workbench/search': (request: WorkbenchSearchRequest) => Promise<RemoteResult<WorkbenchSearchValue>>
     'workbench/setDesc': (request: WorkbenchSetDescRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
     'workbench/update': (request: WorkbenchUpdateRequest) => Promise<RemoteResult<WorkbenchWriteValue>>
+    'workbench/watch': (signal?: AbortSignal) => RemoteStreamHandle<WorkbenchChange, never>
   }
   interface TypertRemoteNamespaceMap {
     'workbench': TypertRemoteNamespace$776f726b62656e63

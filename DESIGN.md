@@ -449,6 +449,104 @@ node repro/serve.mjs 47811        # http://localhost:47811/repro/card-preview.ht
 解析（会话工作区、显式 id、未知 id、无会话、未挂载会话）、可选参数省略、Host 拒绝透传、
 输出 schema 校验、渲染文本、以及服务确实注册了三个工具。Host 改动要重启 DSH 才生效。
 
+## §9.35 筛选四档：只有选中的那颗有底色
+
+筛选行试过一版「全部 / 未完成 透明，已完成 / 已归档 常驻淡绿、淡灰」。验收否掉了：
+
+> 不选择的时候不显示背景色，选择的时候才出现对应的背景色。且四个 tag 只能同时激活一个。
+
+所以规则收到最简：
+
+- **未选中 = 没有底色**。四颗都是纯文字压在面板底色上，谁也看不出"已经选中"；只有 hover 时
+  出现一层中性的 wash（那是临时的，不写进状态）。
+- **只有当前档有底色**：品牌色 9%（`--wb-accent-wash`）配品牌字色，hover 13%。这比筛选行
+  第一版的 14% / 20% 淡了两档 —— 回答最初那句「背景色淡 2 个度」。
+- **同时只能亮一颗**：这不是样式约束，而是结构约束 —— store 里 `filter` 是单个
+  `WorkbenchFilterTier`，`setFilter` 整体替换，所以 `chipActive` 最多挂在一颗上。上一版给
+  已完成 / 已归档 加常驻底色，正是把"选中"这件事说成了"这颗有颜色"，三颗一起亮，才让人怀疑
+  能多选。现在有颜色的那一颗就是唯一选了的那颗，另外补了 `aria-pressed` 让读屏器也这么念。
+- 顺带统一了高度：`chipFlat` 原来给前两颗 26px、后两颗 28px，这个差异没有理由，四颗现在都是
+  28px，`chipFlat` 一并删掉。
+
+实测（预览页，不截图）：未选中的三颗背景是 `rgba(0,0,0,0)`，选中的一颗是品牌色 9%、字色是
+品牌色；四颗高度都是 28。
+
+## §9.36 调用完工具之后，列表自己刷新
+
+需求原文（待办 `#0d7bfdc6`）：
+
+> 调用完工具之后自动刷新待办列表（待办ID：#0d7bfdc6） 1. 给工具调用方法增加钩子，每次调用之后刷新列表
+
+### §9.36.1 为什么不能用"事件"
+
+最先想的是「工具写完发一个事件，客户端收到就刷新」。走不通，原因不在实现而在边界：
+
+- 浏览器能收到的 cordis 事件是一张**关闭的白名单**
+  （`packages/api/remotes/src/remote-events.ts`，28 条：`api-session/status`、
+  `api-session/activity` 等）。第三方插件往里加不了条目 —— 这张表属于 Harness，
+  不属于插件。
+- 已有的两条也都不等于「某次工具调用结束了」：`api-session/activity` 只在用户自己发出
+  持久消息时响，`api-session/status` 只在 agent 起停时响。模型在回合中间调一次
+  `workbench_create` 然后继续干活，这两条都不会响。
+
+### §9.36.2 所以用流：`workbench/watch`
+
+插件自己能拥有的推送方向只有一个：Remote **stream**。所以给 Service 加了第九个
+Remote 方法：
+
+```ts
+@Remote({ mode: 'stream' })
+async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
+```
+
+- `WorkbenchChange` 只有 `{ workspaceId, revision, at }`，**不带改动内容**。通知要回答的
+  只有一句「你手上这张列表过期了吗」，而"过期了"最便宜、最诚实的答法就是照原来的
+  `search` 再查一遍。把记录塞进通知等于开第二条组装列表的路，迟早会在分页、排序、
+  三档计数上和第一条打架（§13.2 的单一权威）。
+- 通知在**写落地之后**发出：`mutate` 在队列槽里改完、`create`/`delete` 在 `put`/`delete`
+  之后。没落地的写发出去，等于让所有面板去追一条不存在的记录。
+- `revision` 是 Host 侧单调计数器。重连后如果同一条通知被重放，面板能认出它。
+- 总线在 Service 实例上，不在模块全局：插件重载时旧 watcher 必须跟着死，否则新代码会
+  往旧总线里发。
+- 队列按 workspace **合并**、并有 64 条上限：一次批量写 20 条同工作区记录，面板只需要
+  听到一次"再看一眼"；慢面板也不会把这里撑成泄漏。
+
+### §9.36.3 客户端只有一处消费：`followChanges`
+
+`client/changes.ts` 里的 `followChanges` 是纯函数（流打开方式、面板集合、定时器都可注入），
+`mount.ts` 只负责接线：
+
+- **一次挂载一条流**，不是每个面板一条。通知到了以后，各自比较
+  `store.workspaceId === change.workspaceId` 决定要不要重查 —— 一个面板正在看 A、
+  另一个在看 B，写 A 只该打扰前者。
+- **重连后必须无条件重查一遍**：断线期间的通知已经没了，这是唯一能补回来的办法。
+  首次打开不算重连（那时候面板要么还没打开、要么正在 `load()`，重查只是白跑一次查询）。
+- **有界重试**：连续失败上限 8 次，退回 250ms 起、封顶 4s。到顶就记一条 error 然后停 ——
+  一个永远在重试的静默循环，会让"列表很久没变"看起来像"没有变化"，这比报错更糟。
+  连接换代（`connection/reset`）时用一份全新的预算重启；这条事件首连也会发一次，
+  多重启一次无害。
+- 第一次 `next()` 之前就订阅：`watch()` 里直接构造一个 `WorkbenchWatcher`（不是
+  async generator —— generator 的函数体要等第一次 `next()` 才跑），否则 Host 端
+  "打开方法"和"开始读"之间落下的写会被静默丢掉。
+
+### §9.36.4 代价
+
+- 本地自己的写也会收到自己的通知，于是多一次 `search`。接受了：查询结果和本地合并结果
+  本应一致，多查一次是"顺手把合并结果校正一遍"；要区分"是不是我自己写的"需要给通知
+  加一个来源字段，而 Host 分不清"哪个 peer 写入的"，加了这个字段也只是猜。
+- 面板在编辑描述时收到重查，草稿在组件里、不在快照里，所以不会被打断。
+
+### §9.36.5 实测
+
+- `pnpm build` 两遍通过（Host 面 + 浏览器面）：`tsc` 检查 `mode: 'stream'` 的
+  `RemoteStreamHandle` 面、`connection/reset` 的事件类型。
+- `pnpm test`：**151 tests / 30 suites**，全绿。新增 `tests/changes.spec.ts`
+  覆盖总线（投递、合并、per-workspace 保留、空 workspace 忽略、abort 后注销、
+  两个 watcher、`revision` 递增）与 `followChanges`（只重查对应面板、重连全量重查、
+  8 次后放弃、dispose 后不再尝试）。
+- `remote-contract.spec.ts` 增加：`watch` 的通告 schema、以及**描述符的 `mode` 必须
+  等于装饰器 marker 的 `mode`** —— 手写描述符和 marker 各自能改，Gateway 只读后者。
+
 ## §13.8 遗留欠账
 
 - `dsh.client.inject` 不一致：客户端源码 import 了
@@ -469,3 +567,5 @@ node repro/serve.mjs 47811        # http://localhost:47811/repro/card-preview.ht
 - 上游限制：Typert 生成器不能分析 monorepo 外的插件，`typert.host.ts` /
   `typert.remote-client.ts` 因此手写，靠 `remote-contract.spec.ts` 防漂移。
 - 插件安装在 profile 里用 `link:`，卸载/重建 profile 可能再次删到仓库（§0）。
+- §9.36 的通知流只回答"这张列表过期了"，不含**谁**改的。想做"别的会话改了我的条目"
+  这类提示，得先有 peer 身份，目前 Host 分不出来。

@@ -201,6 +201,21 @@ const deleteValueSchema = lazy(() => z.union([
     z.object({ code: z.literal('conflict'), current: workItemRecordSchema() }).readonly(),
 ]));
 /**
+ * Mirrors {@link WorkbenchChange}, the notice `watch` streams.
+ *
+ * Strict about all three fields because a notice has no partial reading: a bare
+ * `workspaceId` would leave the pane unable to tell a coalesced duplicate from a
+ * fresh write, and `at` must be a timestamp for a diagnostic log to sort.
+ * `workspaceId` is required to be non-empty here even though the Host refuses to
+ * publish one, so a malformed notice fails at the boundary rather than starting
+ * a re-read of nothing.
+ */
+const changeSchema = lazy(() => z.object({
+    workspaceId: z.string().min(1),
+    revision: z.number().int().positive(),
+    at: z.string(),
+}).readonly());
+/**
  * Every Remote method this package publishes, in one list.
  *
  * `sourceLocation` is deliberately omitted: the protocol types it as optional
@@ -280,6 +295,24 @@ export const INVOCATIONS = [
         invocation: { kind: 'direct' },
         parameters: [param('request', 'WorkbenchDeleteRequest', deleteRequestSchema)],
         result: codec('WorkbenchDeleteValue', deleteValueSchema),
+    },
+    {
+        // The one stream in this package (§9.36). `mode` is what makes the Client
+        // face a `RemoteStreamHandle` rather than a `Promise<RemoteResult<…>>`, and
+        // what the Gateway reads to route the call through the stream carrier. Its
+        // `signal` is *not* a wire parameter: the generator strips a trailing
+        // `AbortSignal` named `signal` and records it as `cancellation` instead, so
+        // the empty `parameters` list plus `cancellation` is the complete, correct
+        // description.
+        id: `${PACKAGE_NAME}#${SERVICE_KEY}/watch`,
+        service: SERVICE_KEY,
+        namespace: SERVICE_KEY,
+        method: 'watch',
+        invocation: { kind: 'direct' },
+        mode: 'stream',
+        parameters: [],
+        cancellation: { parameter: 'signal' },
+        result: codec('WorkbenchChange', changeSchema),
     },
 ];
 //# sourceMappingURL=typert.contract.js.map

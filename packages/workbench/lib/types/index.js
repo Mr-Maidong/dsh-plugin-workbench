@@ -45,6 +45,7 @@ import { queryWords, scoreItem } from "./fuzzy.js";
 import { planRequestComplete } from "./state.js";
 import { workbenchDomain } from "./storage.js";
 import { workbenchCreateTool, workbenchSearchTool } from "./tools.js";
+import { WorkbenchChanges } from "./changes.js";
 /** Search page size when the caller does not ask for one. */
 const DEFAULT_LIMIT = 50;
 /** Search page ceiling, so one query cannot stream an unbounded collection. */
@@ -115,6 +116,7 @@ let WorkbenchService = (() => {
     let _requestComplete_decorators;
     let _archive_decorators;
     let _delete_decorators;
+    let _watch_decorators;
     return class WorkbenchService extends _classSuper {
         static {
             const _metadata = typeof Symbol === "function" && Symbol.metadata ? Object.create(_classSuper[Symbol.metadata] ?? null) : void 0;
@@ -126,6 +128,7 @@ let WorkbenchService = (() => {
             _requestComplete_decorators = [Remote('requestComplete')];
             _archive_decorators = [Remote('archive')];
             _delete_decorators = [Remote('delete')];
+            _watch_decorators = [Remote({ mode: 'stream' })];
             __esDecorate(this, null, _probe_decorators, { kind: "method", name: "probe", static: false, private: false, access: { has: obj => "probe" in obj, get: obj => obj.probe }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _search_decorators, { kind: "method", name: "search", static: false, private: false, access: { has: obj => "search" in obj, get: obj => obj.search }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _create_decorators, { kind: "method", name: "create", static: false, private: false, access: { has: obj => "create" in obj, get: obj => obj.create }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -134,6 +137,7 @@ let WorkbenchService = (() => {
             __esDecorate(this, null, _requestComplete_decorators, { kind: "method", name: "requestComplete", static: false, private: false, access: { has: obj => "requestComplete" in obj, get: obj => obj.requestComplete }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _archive_decorators, { kind: "method", name: "archive", static: false, private: false, access: { has: obj => "archive" in obj, get: obj => obj.archive }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _delete_decorators, { kind: "method", name: "delete", static: false, private: false, access: { has: obj => "delete" in obj, get: obj => obj.delete }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _watch_decorators, { kind: "method", name: "watch", static: false, private: false, access: { has: obj => "watch" in obj, get: obj => obj.watch }, metadata: _metadata }, null, _instanceExtraInitializers);
             if (_metadata) Object.defineProperty(this, Symbol.metadata, { enumerable: true, configurable: true, writable: true, value: _metadata });
         }
         static inject = ['storageDomain', 'workspaceRegistry'];
@@ -155,6 +159,14 @@ let WorkbenchService = (() => {
          * correct direction: the user's own text is never silently replaced.
          */
         writeBacks = new Map();
+        /**
+         * The write bus every open pane watches (§9.36).
+         *
+         * It lives on the service rather than in a module global because it must die
+         * with the service: a reloaded plugin publishing into an orphaned bus would
+         * feed watchers that belong to the previous generation.
+         */
+        changes = new WorkbenchChanges();
         /**
          * @param ctx - Host services owning the storage hub and the workspace registry.
          */
@@ -467,6 +479,7 @@ let WorkbenchService = (() => {
             };
             const table = await this.table();
             await table.put(record.id, record);
+            this.changes.publish(request.workspaceId);
             return { code: 'ok', item: record };
         }
         /**
@@ -643,7 +656,30 @@ let WorkbenchService = (() => {
             // A pending write-back for a deleted item can never be answered, so its
             // version guard is dropped with the item.
             this.writeBacks.delete(request.id);
+            this.changes.publish(request.workspaceId);
             return { code: 'ok', id: request.id };
+        }
+        /**
+         * Stream one notice per write until the caller goes away (§9.36).
+         *
+         * This is the Host's half of "the list keeps up on its own". A pane opens this
+         * once and re-reads `search` when a notice arrives, which is what makes a
+         * model's tool call (`workbench_create`, `workbench_complete`) show up without
+         * the user pressing 刷新 — the tool writes through the same methods this bus
+         * announces, so there is no second write path to remember to notify from.
+         *
+         * Cancellation is the carrier's: `signal` is filled in by the Gateway from the
+         * logical stream, so a closed tab ends the generator instead of leaving it
+         * parked on a promise.
+         * @param signal - cancellation owned by the Remote stream carrier.
+         * @returns the Host's change notices, oldest first.
+         */
+        async *watch(signal) {
+            // Opening the domain first turns "plugin not ready" into a stream that ends
+            // with the real cause, rather than a notice stream that silently stays empty
+            // while every re-read fails.
+            await this.ready;
+            yield* this.changes.watch(signal);
         }
         /**
          * The open domain's item table.
@@ -712,6 +748,9 @@ let WorkbenchService = (() => {
                         throw new WorkbenchConflict(record);
                     return { ...transform(record), updateAt: now };
                 });
+                // Announced after the queue slot has landed, so a pane re-reading on the
+                // strength of this notice cannot beat the write it is about (§9.36).
+                this.changes.publish(request.workspaceId, now);
                 return { code: 'ok', item: next };
             }
             catch (error) {

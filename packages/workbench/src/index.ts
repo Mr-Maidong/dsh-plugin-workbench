@@ -29,8 +29,9 @@ import type { RequestCompletePlan } from './state.ts'
 import { workbenchDomain } from './storage.ts'
 import { workbenchCreateTool, workbenchSearchTool } from './tools.ts'
 import type { WorkbenchToolHost, WorkbenchToolWorkspace } from './tools.ts'
+import { WorkbenchChanges } from './changes.ts'
 import type {
-  WorkItemId, WorkItemRecord, WorkbenchArchiveRequest, WorkbenchCompletionInput,
+  WorkItemId, WorkItemRecord, WorkbenchArchiveRequest, WorkbenchChange, WorkbenchCompletionInput,
   WorkbenchCreateRequest, WorkbenchDeleteRequest, WorkbenchDeleteValue, WorkbenchProbeValue,
   WorkbenchRequestCompleteRequest, WorkbenchSearchRequest, WorkbenchSearchValue,
   WorkbenchSetDescRequest, WorkbenchUpdateRequest, WorkbenchWriteValue,
@@ -144,6 +145,15 @@ export class WorkbenchService extends TypertRemoteService {
    * correct direction: the user's own text is never silently replaced.
    */
   private readonly writeBacks = new Map<string, string>()
+
+  /**
+   * The write bus every open pane watches (§9.36).
+   *
+   * It lives on the service rather than in a module global because it must die
+   * with the service: a reloaded plugin publishing into an orphaned bus would
+   * feed watchers that belong to the previous generation.
+   */
+  private readonly changes = new WorkbenchChanges()
 
   /**
    * @param ctx - Host services owning the storage hub and the workspace registry.
@@ -457,6 +467,7 @@ export class WorkbenchService extends TypertRemoteService {
 
     const table = await this.table()
     await table.put(record.id, record)
+    this.changes.publish(request.workspaceId)
     return { code: 'ok', item: record }
   }
 
@@ -633,7 +644,32 @@ export class WorkbenchService extends TypertRemoteService {
     // A pending write-back for a deleted item can never be answered, so its
     // version guard is dropped with the item.
     this.writeBacks.delete(request.id)
+    this.changes.publish(request.workspaceId)
     return { code: 'ok', id: request.id }
+  }
+
+  /**
+   * Stream one notice per write until the caller goes away (§9.36).
+   *
+   * This is the Host's half of "the list keeps up on its own". A pane opens this
+   * once and re-reads `search` when a notice arrives, which is what makes a
+   * model's tool call (`workbench_create`, `workbench_complete`) show up without
+   * the user pressing 刷新 — the tool writes through the same methods this bus
+   * announces, so there is no second write path to remember to notify from.
+   *
+   * Cancellation is the carrier's: `signal` is filled in by the Gateway from the
+   * logical stream, so a closed tab ends the generator instead of leaving it
+   * parked on a promise.
+   * @param signal - cancellation owned by the Remote stream carrier.
+   * @returns the Host's change notices, oldest first.
+   */
+  @Remote({ mode: 'stream' })
+  async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange> {
+    // Opening the domain first turns "plugin not ready" into a stream that ends
+    // with the real cause, rather than a notice stream that silently stays empty
+    // while every re-read fails.
+    await this.ready
+    yield* this.changes.watch(signal)
   }
 
   /**
@@ -708,6 +744,9 @@ export class WorkbenchService extends TypertRemoteService {
         if (expected !== undefined && record.updateAt !== expected) throw new WorkbenchConflict(record)
         return { ...transform(record), updateAt: now } satisfies WorkItemRecord
       })
+      // Announced after the queue slot has landed, so a pane re-reading on the
+      // strength of this notice cannot beat the write it is about (§9.36).
+      this.changes.publish(request.workspaceId, now)
       return { code: 'ok', item: next }
     } catch (error) {
       if (error instanceof WorkbenchConflict) return { code: 'conflict', current: error.current }

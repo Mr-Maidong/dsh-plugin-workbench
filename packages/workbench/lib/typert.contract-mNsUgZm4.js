@@ -180,9 +180,20 @@ const updateRequestSchema = lazy(() => z.object({
 	tag: z.string().optional(),
 	expectedUpdateAt: z.string().optional()
 }).readonly());
+const requestCompleteRequestSchema = lazy(() => z.object({
+	workspaceId: z.string(),
+	id: z.string(),
+	expectedUpdateAt: z.string().optional()
+}).readonly());
 const deleteRequestSchema = lazy(() => z.object({
 	workspaceId: z.string(),
 	id: z.string()
+}).readonly());
+const archiveRequestSchema = lazy(() => z.object({
+	workspaceId: z.string(),
+	id: z.string(),
+	archived: z.boolean(),
+	expectedUpdateAt: z.string().optional()
 }).readonly());
 /**
 * The three ways a write and a delete differ, and the one way they do not.
@@ -224,6 +235,21 @@ const deleteValueSchema = lazy(() => z.union([
 		current: workItemRecordSchema()
 	}).readonly()
 ]));
+/**
+* Mirrors {@link WorkbenchChange}, the notice `watch` streams.
+*
+* Strict about all three fields because a notice has no partial reading: a bare
+* `workspaceId` would leave the pane unable to tell a coalesced duplicate from a
+* fresh write, and `at` must be a timestamp for a diagnostic log to sort.
+* `workspaceId` is required to be non-empty here even though the Host refuses to
+* publish one, so a malformed notice fails at the boundary rather than starting
+* a re-read of nothing.
+*/
+const changeSchema = lazy(() => z.object({
+	workspaceId: z.string().min(1),
+	revision: z.number().int().positive(),
+	at: z.string()
+}).readonly());
 /**
 * Every Remote method this package publishes, in one list.
 *
@@ -279,6 +305,24 @@ const INVOCATIONS = [
 		result: codec("WorkbenchWriteValue", writeValueSchema)
 	},
 	{
+		id: `${PACKAGE_NAME}#${SERVICE_KEY}/requestComplete`,
+		service: SERVICE_KEY,
+		namespace: SERVICE_KEY,
+		method: "requestComplete",
+		invocation: { kind: "direct" },
+		parameters: [param("request", "WorkbenchRequestCompleteRequest", requestCompleteRequestSchema)],
+		result: codec("WorkbenchWriteValue", writeValueSchema)
+	},
+	{
+		id: `${PACKAGE_NAME}#${SERVICE_KEY}/archive`,
+		service: SERVICE_KEY,
+		namespace: SERVICE_KEY,
+		method: "archive",
+		invocation: { kind: "direct" },
+		parameters: [param("request", "WorkbenchArchiveRequest", archiveRequestSchema)],
+		result: codec("WorkbenchWriteValue", writeValueSchema)
+	},
+	{
 		id: `${PACKAGE_NAME}#${SERVICE_KEY}/delete`,
 		service: SERVICE_KEY,
 		namespace: SERVICE_KEY,
@@ -286,6 +330,17 @@ const INVOCATIONS = [
 		invocation: { kind: "direct" },
 		parameters: [param("request", "WorkbenchDeleteRequest", deleteRequestSchema)],
 		result: codec("WorkbenchDeleteValue", deleteValueSchema)
+	},
+	{
+		id: `${PACKAGE_NAME}#${SERVICE_KEY}/watch`,
+		service: SERVICE_KEY,
+		namespace: SERVICE_KEY,
+		method: "watch",
+		invocation: { kind: "direct" },
+		mode: "stream",
+		parameters: [],
+		cancellation: { parameter: "signal" },
+		result: codec("WorkbenchChange", changeSchema)
 	}
 ];
 //#endregion

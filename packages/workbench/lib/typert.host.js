@@ -1,4 +1,4 @@
-import { n as PACKAGE_NAME, r as SERVICE_KEY, t as INVOCATIONS } from "./typert.contract-BCQpTL2y.js";
+import { n as PACKAGE_NAME, r as SERVICE_KEY, t as INVOCATIONS } from "./typert.contract-mNsUgZm4.js";
 //#region packages/workbench/lib/types/typert.host.js
 /**
 * Hand-maintained Host-face Typert contribution — normally generated, see
@@ -78,6 +78,12 @@ const TYPERT = {
 					name: "delete",
 					signature: "@Remote('delete') delete(request: WorkbenchDeleteRequest): Promise<WorkbenchDeleteValue>",
 					summary: "Delete one work item."
+				},
+				{
+					kind: "method",
+					name: "watch",
+					signature: "@Remote({ mode: 'stream' }) watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>",
+					summary: "Stream one notice per write so an open pane can re-read its list."
 				}
 			],
 			types: [
@@ -140,6 +146,10 @@ const TYPERT = {
 				{
 					name: "WorkbenchDeleteValue",
 					declaration: "export type WorkbenchDeleteValue = { readonly code: 'ok'; readonly id: string } | { readonly code: 'not_found'; readonly id: string } | { readonly code: 'conflict'; readonly current: WorkItemRecord }"
+				},
+				{
+					name: "WorkbenchChange",
+					declaration: "export interface WorkbenchChange { readonly workspaceId: string; readonly revision: number; readonly at: string }"
 				}
 			]
 		}],

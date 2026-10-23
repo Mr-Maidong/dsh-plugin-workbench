@@ -288,3 +288,25 @@ export type WorkbenchDeleteValue =
   | { readonly code: 'ok'; readonly id: string }
   | { readonly code: 'not_found'; readonly id: string }
   | { readonly code: 'conflict'; readonly current: WorkItemRecord }
+
+/**
+ * One change notice, as `watch` streams it (DESIGN.md §9.36).
+ *
+ * It deliberately carries no item and no diff. A notice answers exactly one
+ * question — "is the list I am holding still the list the Host has?" — and the
+ * cheap honest answer to a *no* is a re-query through the same `search` the pane
+ * already runs. Shipping the changed record here would create a second way for
+ * the list to be populated, and the two would eventually disagree about paging,
+ * ranking, and tier counts.
+ *
+ * `revision` is the Host's counter, monotonic across workspaces. A watcher can
+ * use it to drop a notice it has already acted on after a reconnect replays one.
+ */
+export interface WorkbenchChange {
+  /** Workspace whose items changed; `''` never appears on the wire. */
+  readonly workspaceId: string
+  /** Host-wide write sequence number of this notice. */
+  readonly revision: number
+  /** When the Host applied the write, ISO-8601 UTC with millisecond precision. */
+  readonly at: string
+}

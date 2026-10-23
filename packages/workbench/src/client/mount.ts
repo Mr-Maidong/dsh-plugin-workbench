@@ -35,6 +35,8 @@ import { guardWorkbenchTab } from './guard.ts'
 import type { WorkbenchTabSidebar } from './guard.ts'
 import { WorkbenchStore } from './store.ts'
 import type { WorkbenchGateway } from './store.ts'
+import { describe } from './store.ts'
+import { followChanges } from './changes.ts'
 import { en, NS, zh } from './locales.ts'
 import { bindWorkspaceSource } from './workspace-source.ts'
 import { CLIENT_DEPS } from './deps.ts'
@@ -50,6 +52,8 @@ export type { WorkbenchInjected, WorkbenchTabProps, WorkbenchTabTitleProps } fro
 export type { WorkbenchMenuItemProps } from './WorkbenchMenu.tsx'
 export type { WorkbenchLocaleKey } from './locales.ts'
 export type { WorkbenchFilterTier, WorkbenchGateway, WorkbenchSnapshot } from './store.ts'
+export type { ChangeTarget, FollowOptions, FollowOutcome } from './changes.ts'
+export { followChanges } from './changes.ts'
 export type { WorkbenchTabRuling, WorkbenchTabScreen, WorkbenchTabSidebar } from './guard.ts'
 export { WorkbenchStore, filterToRequest, toMarkdown } from './store.ts'
 export { WORKBENCH_KIND, WORKBENCH_MENU_ID, WORKBENCH_TAB_ID, workbenchTabDefinition } from './definition.ts'
@@ -151,6 +155,62 @@ function registerUi(ctx: Context): void {
   // prototype methods that read `this`, while React calls a
   // `useSyncExternalStore` pair with no receiver. See `workspace-source.ts`.
   const workspaces = bindWorkspaceSource(ctx.workspaces.list)
+
+  /*
+   * The Host's write notices, turned into a re-read of whichever pane is showing
+   * the workspace that changed (§9.36).
+   *
+   * One follower for the whole mount, not one per pane: the Host publishes a
+   * notice per write and each store decides for itself whether the notice names
+   * the workspace it is showing. That is what makes a *model* write appear —
+   * `workbench_create` and `workbench_complete` run Host-side with no Client
+   * call to hook, so nothing in the pane would otherwise know to look again.
+   *
+   * `follower` is replaced on every restart, so a stream left over from a dead
+   * connection generation is aborted rather than resumed; `startFollow` is
+   * idempotent from the caller's side.
+   */
+  let follower: AbortController | undefined
+  const startFollow = (): void => {
+    follower?.abort()
+    const remote = ctx.remote.workbench
+    // A composition may provide `remote.workbench` itself (see `mountWorkbench`),
+    // and that provider need not be this version — it can be missing `watch`.
+    // Following a method that is not there would mean eight failures and a
+    // stack-shaped log; saying so once is the honest report.
+    if (typeof remote.watch !== 'function') {
+      ctx.logger.warn('workbench: the mounted Remote namespace has no watch method; the list updates only when opened or refreshed')
+      return
+    }
+    const control = new AbortController()
+    follower = control
+    void followChanges({
+      open: () => remote.watch(),
+      targets: () => [...stores.values()],
+      signal: control.signal,
+      onError: error => ctx.logger.warn(`workbench: change stream failed: ${describe(error).message}`),
+    }).then((outcome) => {
+      if (outcome !== 'gave-up' || control.signal.aborted) return
+      // Logged rather than retried forever: at this point the wire has failed
+      // eight times running, and a silent loop would hide that behind a list
+      // that merely looks quiet.
+      ctx.logger.error('workbench: giving up on change notices — the list will only update on manual refresh')
+    })
+  }
+  startFollow()
+
+  ctx.effect(() => {
+    // A new connection generation kills every stream opened on the old one, and
+    // the notices written during the gap are gone. Restarting with a fresh
+    // retry budget — and with the reconnect re-read `followChanges` performs —
+    // is what makes a Host restart recoverable instead of final.
+    const off = ctx.on('connection/reset', startFollow)
+    return () => {
+      off()
+      follower?.abort()
+      follower = undefined
+    }
+  }, 'workbench: change stream')
 
   const injected = (): WorkbenchInjected => ({
     storeFor: (sessionId: string) => {

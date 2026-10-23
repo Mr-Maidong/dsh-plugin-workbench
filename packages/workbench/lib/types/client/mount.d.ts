@@ -17,6 +17,8 @@ export type { WorkbenchInjected, WorkbenchTabProps, WorkbenchTabTitleProps } fro
 export type { WorkbenchMenuItemProps } from './WorkbenchMenu.tsx';
 export type { WorkbenchLocaleKey } from './locales.ts';
 export type { WorkbenchFilterTier, WorkbenchGateway, WorkbenchSnapshot } from './store.ts';
+export type { ChangeTarget, FollowOptions, FollowOutcome } from './changes.ts';
+export { followChanges } from './changes.ts';
 export type { WorkbenchTabRuling, WorkbenchTabScreen, WorkbenchTabSidebar } from './guard.ts';
 export { WorkbenchStore, filterToRequest, toMarkdown } from './store.ts';
 export { WORKBENCH_KIND, WORKBENCH_MENU_ID, WORKBENCH_TAB_ID, workbenchTabDefinition } from './definition.ts';

@@ -38,10 +38,10 @@ import { TYPERT_REMOTE } from '../lib/typert.remote-client.js'
 const SERVICE_KEY = 'workbench'
 
 /** The methods P1 publishes. Kept explicit so a silently dropped endpoint fails here. */
-const EXPECTED_METHODS = ['probe', 'search', 'create', 'setDesc', 'update', 'archive', 'requestComplete', 'delete']
+const EXPECTED_METHODS = ['probe', 'search', 'create', 'setDesc', 'update', 'archive', 'requestComplete', 'delete', 'watch']
 
 /** Methods that take no argument beyond the caller's context. */
-const PARAMETERLESS = new Set(['probe'])
+const PARAMETERLESS = new Set(['probe', 'watch'])
 
 /**
  * A Service and not just a prototype, because the protocol records Remote
@@ -80,6 +80,9 @@ const service = new WorkbenchService(
   stubContext as unknown as ConstructorParameters<typeof WorkbenchService>[0],
 )
 
+/** Methods that stream rather than answer once (§9.36). */
+const STREAMS = new Set(['watch'])
+
 const markers = remoteMethods(service)
 const endpointName = (marker: { method: string, exportName?: string }): string => marker.exportName ?? marker.method
 
@@ -114,7 +117,11 @@ describe('Remote contract', () => {
       assert.equal(descriptor.service, SERVICE_KEY)
       assert.equal(descriptor.namespace, SERVICE_KEY)
       assert.equal(descriptor.id, `dsh-plugin-workbench#${SERVICE_KEY}/${descriptor.method}`)
-      assert.equal(descriptor.mode, undefined, `${descriptor.method} must not be a stream`)
+      assert.equal(
+        descriptor.mode,
+        STREAMS.has(descriptor.method) ? 'stream' : undefined,
+        `${descriptor.method} has the wrong carrier mode`,
+      )
       assert.equal(typeof service[descriptor.method], 'function')
     }
   })
@@ -124,6 +131,22 @@ describe('Remote contract', () => {
       const marker = markers.find(candidate => endpointName(candidate) === descriptor.method)
       assert.ok(marker, `no @Remote marker for ${descriptor.method}`)
       assert.deepEqual(descriptor.invocation, marker.invocation)
+      // The descriptor is hand-written, so the *marker* is what the Gateway
+      // reads when it decides between the unary and stream carriers. A mode
+      // that only the descriptor knew about would mount a stream the Host would
+      // refuse to open, and the failure would surface in a browser.
+      assert.equal(descriptor.mode, marker.mode, `${descriptor.method} mode disagrees with its marker`)
+      // Not compared with the marker: the Host reads cancellation off the live
+      // method's last parameter (`gateway/src/index.ts` `srcDescriptor`), and a
+      // `@Remote` marker records only `method`, `mode`, and `invocation`. The
+      // descriptor still has a duty here — it is the only place that says the
+      // stream takes the carrier's signal, which is why the service's `watch`
+      // declares `signal` last.
+      assert.deepEqual(
+        descriptor.cancellation,
+        STREAMS.has(descriptor.method) ? { parameter: 'signal' } : undefined,
+        `${descriptor.method} cancellation is wrong`,
+      )
     }
   })
 
@@ -245,6 +268,20 @@ describe('Remote contract', () => {
     const schema = descriptorOf('search').parameters[0]?.codec.create()
     assert.ok(schema)
     assert.deepEqual(schema.parse({ query: 'a', fromTheFuture: true }), { query: 'a' })
+  })
+
+  it('describes a change notice as a workspace, a revision, and an instant', () => {
+    const schema = descriptorOf('watch').result.create()
+    const change = { workspaceId: 'w', revision: 3, at: '2024-01-01T00:00:00.000Z' }
+    assert.deepEqual(schema.parse(change), change)
+
+    // Unnamed and unordered notices have no meaning: the pane cannot tell which
+    // list to re-read, and a log line cannot say when the write it reports landed.
+    assert.throws(() => schema.parse({ revision: 3, at: change.at }), 'the workspace is required')
+    assert.throws(() => schema.parse({ ...change, workspaceId: '' }), 'an empty workspace names nothing')
+    assert.throws(() => schema.parse({ ...change, revision: 0 }), 'revisions count from one')
+    assert.throws(() => schema.parse({ ...change, revision: 1.5 }), 'a revision is a whole number')
+    assert.throws(() => schema.parse({ workspaceId: 'w', at: change.at }), 'the revision is required')
   })
 
   /*

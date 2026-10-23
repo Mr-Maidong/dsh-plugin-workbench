@@ -962,6 +962,7 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   gap: 5px;
   flex: none;
   height: 26px;
+  margin-top: 1px;
   padding: 0 7px;
   border: 0;
   border-radius: 10px;

@@ -29,10 +29,8 @@ export declare const zh: {
     readonly 'workspace.noneHint': "先在左侧栏创建一个工作区，工作项按工作区存放。";
     readonly 'workspace.unassigned': "这个对话不在任何工作区里";
     readonly 'workspace.unassignedHint': "把对话移进一个工作区，工作台就显示存放在那里的工作项。";
-    readonly 'empty.title': "这个工作区还没有工作项";
-    readonly 'empty.hint': "用筛选行右侧的「+」新建一条";
-    readonly 'empty.filtered': "这一档没有工作项";
-    readonly 'empty.filteredHint': "换个筛选档，或把搜索词清空。";
+    readonly 'empty.hint': "点击「+」新建一条";
+    readonly 'empty.filtered': "换个筛选档，或把搜索词清空。";
     readonly 'list.more': "还有 {count} 条未显示";
     readonly 'card.noDescription': "添加描述…";
     readonly 'card.noTag': "+ 标签";

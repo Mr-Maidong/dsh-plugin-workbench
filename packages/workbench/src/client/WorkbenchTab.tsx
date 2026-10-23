@@ -27,6 +27,7 @@ import { workspaceOfSession } from './workspace-source.ts'
 import type { WorkspaceListSource } from './workspace-source.ts'
 import type { WriteBackQueued } from './write-back.ts'
 import css from './WorkbenchTab.module.css'
+import emptyArt from './assets/empty.webp'
 
 /** What the slot's inject face supplies to the body. */
 export interface WorkbenchInjected {
@@ -501,20 +502,22 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
 
             {snapshot.items.length === 0 && editing.kind !== 'create' && (
               <div className={css.empty}>
-                <EmptyGlyph />
-                {snapshot.query !== '' || snapshot.filter !== 'all'
-                  ? (
-                      <>
-                        <p>{t('empty.filtered')}</p>
-                        <p className={css.emptyHint}>{t('empty.filteredHint')}</p>
-                      </>
-                    )
-                  : (
-                      <>
-                        <p>{t('empty.title')}</p>
-                        <p className={css.emptyHint}>{t('empty.hint')}</p>
-                      </>
-                    )}
+                <img
+                  className={css.emptyArt}
+                  src={emptyArt}
+                  alt=""
+                  aria-hidden="true"
+                  width={600}
+                  height={499}
+                  draggable={false}
+                />
+                {/* One line, not two: the illustration already says the list is
+                    empty, so a headline above the hint only repeated it. */}
+                <p>
+                  {snapshot.query !== '' || snapshot.filter !== 'all'
+                    ? t('empty.filtered')
+                    : t('empty.hint')}
+                </p>
               </div>
             )}
 
@@ -865,9 +868,8 @@ function Card({
 function CompletionEmpty({ t }: { readonly t: CardProps['t'] }): ReactNode {
   return (
     <div className={css.detailEmpty} role="img" aria-label={t('detail.noCompletion')}>
-      {/* The list's own empty mark — a sheet with a line on it — drawn without
-          `css.emptyGlyph`, whose 14px bottom margin belongs to the block layout
-          it was written for. */}
+      {/* The completion area's own mark — a sheet with a line on it — at its
+          24px detail size; the list's empty state is illustrated instead. */}
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <rect x="3" y="4.5" width="18" height="15" rx="4" stroke="currentColor" strokeWidth="1.3" />
         <path d="M3 9.5h18M7.5 14h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -1217,16 +1219,6 @@ function ArchiveGlyph(): ReactNode {
         strokeLinejoin="round"
       />
       <path d="M8 8.2v3.4M6.5 10.1L8 11.6l1.5-1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-/** The empty completion state: a sheet with nothing written on it (§9.31). */
-function EmptyGlyph(): ReactNode {
-  return (
-    <svg className={css.emptyGlyph} width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="4.5" width="18" height="15" rx="4" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M3 9.5h18M7.5 14h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
   )
 }

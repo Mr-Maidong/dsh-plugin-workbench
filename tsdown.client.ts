@@ -23,6 +23,9 @@
  *    ids ending in `.css`.
  * 4. Source maps chain through the tsc maps under `lib/types`, so a browser
  *    stack frame resolves back to the original `.tsx`.
+ * 5. Raster assets are inlined as `data:` URLs: the artifact is one
+ *    `client.js` served from the plugin route, so a sibling file emitted by
+ *    the asset pipeline would have nowhere to be requested from.
  *
  * Deliberately not ported from the monorepo preset, because each one is a
  * repository-level gate rather than an artifact rule:
@@ -86,6 +89,22 @@ const PRELOADED_CLIENT_EXTERNALS: readonly string[] = []
 const CSS_VIRTUAL_PREFIX = '\0dsh-css:'
 const CSS_VIRTUAL_SUFFIX = '.mjs'
 
+/** Virtual-id wrapper for an inlined raster asset. */
+const ASSET_VIRTUAL_PREFIX = '\0dsh-asset:'
+
+/** Raster formats inlined as data URLs; SVG stays source text and is not matched. */
+const RASTER_ASSET = /\.(?:png|webp|jpe?g|gif|avif)$/i
+
+/** MIME type per inlined raster extension, keyed by lowercase suffix. */
+const ASSET_MIME: Readonly<Record<string, string>> = {
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.avif': 'image/avif',
+}
+
 /** Escape a package name for literal use inside a RegExp source. */
 function escapeSpecifier(name: string): string {
   return name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -143,6 +162,20 @@ function styleInjectionModule(
   ]
   source.push(classMap === undefined ? 'export {};' : `export default ${JSON.stringify(classMap)};`)
   return source.join('\n')
+}
+
+/**
+ * Emit one raster asset as a data-URL module.
+ * @param fileId - physical asset path; its extension picks the MIME type.
+ * @param data - the asset bytes.
+ * @returns the module body for the virtual asset id.
+ */
+function assetModule(fileId: string, data: Buffer): string {
+  const extension = fileId.slice(fileId.lastIndexOf('.')).toLowerCase()
+  const mime = ASSET_MIME[extension]
+  if (mime === undefined) throw new Error(`client asset: ${fileId} has no MIME mapping`)
+  const url = `data:${mime};base64,${data.toString('base64')}`
+  return `export default ${JSON.stringify(url)};`
 }
 
 /**
@@ -314,6 +347,22 @@ export function clientBundle(
         return options.alias?.[source] ?? null
       },
     }, tscSourceMapPlugin(), {
+      // The artifact is a single file, so an image import becomes its bytes
+      // rather than an emitted sibling URL.
+      name: 'dsh-asset-inline',
+      resolveId(source: string, importer: string | undefined) {
+        if (!RASTER_ASSET.test(source)) return null
+        const absolute = importer !== undefined ? sourceAssetPath(source, importer) : source
+        return ASSET_VIRTUAL_PREFIX + absolute
+      },
+      async load(virtualId: string) {
+        if (!virtualId.startsWith(ASSET_VIRTUAL_PREFIX)) return null
+        const fileId = virtualId.slice(ASSET_VIRTUAL_PREFIX.length)
+        // The virtual id otherwise hides the physical file from the watch graph.
+        this.addWatchFile(fileId)
+        return assetModule(fileId, await readFile(fileId))
+      },
+    }, {
       name: 'dsh-css-modules-inline',
       resolveId(source: string, importer: string | undefined) {
         if (!source.endsWith('.module.css')) return null

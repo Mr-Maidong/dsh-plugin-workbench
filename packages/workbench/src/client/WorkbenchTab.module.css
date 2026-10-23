@@ -1577,14 +1577,20 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 24px;
+  padding: 36px 24px;
   text-align: center;
 }
 
-/* Prototype `.emptyGlyph`, above the sentence rather than beside it. */
-.emptyGlyph {
-  margin-bottom: 14px;
-  color: var(--wb-caption);
+/* The illustrated empty state: a whale beside an empty box, above the
+   sentence rather than beside it. Its 600px intrinsic width only matters as the
+   aspect-ratio authority; the pane caps it well below that. */
+.emptyArt {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  margin-bottom: -8px;
+  user-select: none;
 }
 
 .empty p {

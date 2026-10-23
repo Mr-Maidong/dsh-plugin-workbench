@@ -547,6 +547,46 @@ async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
 - `remote-contract.spec.ts` 增加：`watch` 的通告 schema、以及**描述符的 `mode` 必须
   等于装饰器 marker 的 `mode`** —— 手写描述符和 marker 各自能改，Gateway 只读后者。
 
+## §9.37 列表空状态换成插画
+
+列表为空时不再画 `EmptyGlyph` 那个 28px 的线框纸页，改用一张鲸鱼与空纸箱的插画
+（原图 `empty.png`，1402×1122、带透明通道）。
+
+### §9.37.1 素材
+
+- 先按 alpha>1 的包围盒裁掉四周透明边（`154,157,1095,909`），再缩到宽 600：
+  `cwebp -q 92 -crop 154 157 1095 909 -resize 600 0 -alpha_q 100 -m 6`，
+  输出 `src/client/assets/empty.webp`（600×499，约 96 KB）。裁边让插画在 240px 的
+  显示宽度里占满画面，而不是显示一半透明留白。
+- alpha 用无损（`-alpha_q 100`），否则深色主题下透明边会出灰边。
+
+### §9.37.2 打包方式
+
+浏览器产物是**单个** `client.js`，由插件路由提供，同目录多出一个图片文件没有 URL 可请求。
+因此 `tsdown.client.ts` 新增 `dsh-asset-inline`：`.png/.webp/.jpg/.gif/.avif` 的 import
+在打包时变成 `data:` URL 字符串（`ASSET_MIME` 决定 MIME），并 `addWatchFile` 让监视
+包含物理文件。`css-modules.d.ts` 只声明 `*.webp` / `*.png` 两个模块类型。
+
+代价是 `client.js` 多约 129 KB（base64）。接受：图片只有一张，gzip 后增量远小于这个数，
+而外置文件在当前产物形态下无法加载。
+
+### §9.37.3 显示
+
+`.emptyArt`：`width: 100%; max-width: 240px; height: auto`，在 320px 面板里也不挤。
+图是装饰性的（`alt=""` + `aria-hidden`），图下只留**一行**文案：列表为空时
+「点击「+」新建一条」，筛选或搜索空档时「换个筛选档，或把搜索词清空。」。
+原来的标题行（「这个工作区还没有工作项」/「这一档没有工作项」）连同 `empty.title`、
+`empty.filteredHint` 两个 key 一起删掉 —— 插画已经说了列表是空的，标题只是把这句话
+再说一遍。`width/height` 写死 600×499 以免解码前跳动。
+`EmptyGlyph` 与 `.emptyGlyph` 随列表空状态一起删除；待办总结区的 `detailEmpty` 图标
+是另一处，保留。
+
+### §9.37.4 复验
+
+- `pnpm build` 两遍通过，`pnpm typecheck` 通过，`pnpm test` 151 tests 全绿。
+- 产物内 base64 解码后与原 webp 的 sha256 一致；`emptyGlyph` 已不在产物里。
+- 用 headless Chrome 按 320px 面板宽度渲染日/夜两套主题核对：插画居中、文字间距正常。
+
 ## §13.8 遗留欠账
 
 - `dsh.client.inject` 不一致：客户端源码 import 了

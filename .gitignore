@@ -12,6 +12,10 @@ node_modules/
 Thumbs.db
 *.log
 
+# Packaging output (`pnpm pack`): a tarball of the committed lib, reproducible
+# from the working tree, so it is not a source file.
+dist/
+
 # Sandbox ACL diagnostics (tool output, never a deliverable) and the generated
 # preview page plus its scratch screenshots: `repro/card-preview.mjs` writes the
 # HTML from the built bundle, so it is reproducible and not committed.

@@ -38,10 +38,8 @@ export const zh = {
   'workspace.unassigned': '这个对话不在任何工作区里',
   'workspace.unassignedHint': '把对话移进一个工作区，工作台就显示存放在那里的工作项。',
 
-  'empty.title': '这个工作区还没有工作项',
-  'empty.hint': '用筛选行右侧的「+」新建一条',
-  'empty.filtered': '这一档没有工作项',
-  'empty.filteredHint': '换个筛选档，或把搜索词清空。',
+  'empty.hint': '点击「+」新建一条',
+  'empty.filtered': '换个筛选档，或把搜索词清空。',
 
   'list.more': '还有 {count} 条未显示',
 
@@ -156,10 +154,8 @@ export const en: Record<WorkbenchLocaleKey, string> = {
   'workspace.unassigned': 'This conversation is not in a workspace',
   'workspace.unassignedHint': 'Move the conversation into a workspace and the workbench shows the work items kept there.',
 
-  'empty.title': 'No work items in this workspace',
-  'empty.hint': 'Create one with the “+” at the right of the filter row',
-  'empty.filtered': 'Nothing in this tier',
-  'empty.filteredHint': 'Try another tier, or clear the search box.',
+  'empty.hint': 'Click “+” to create one',
+  'empty.filtered': 'Try another tier, or clear the search box.',
 
   'list.more': '{count} more not shown',
 

@@ -282,7 +282,7 @@ node repro/serve.mjs 47811        # http://localhost:47811/repro/card-preview.ht
 | `typert.contract.ts` | `archiveRequestSchema` + `INVOCATIONS` 一项 |
 | `typert.host.ts` / `typert.remote-client.ts` | 方法签名与类型声明（手维护的两份副本，`remote-contract.spec.ts` 读源码比对） |
 | `mount.ts` / `store.ts` | `gateway.archive` + `store.setArchived()` |
-| `WorkbenchTab.tsx` | 动作行第三个按钮，`归档` / `取消归档`，图标 `ArchiveGlyph`（盒子 + 向下箭头，13px、1.3 描边，和行内其他图形同重量） |
+| `WorkbenchTab.tsx` | 动作行第三个按钮，`归档` / `取消归档`，图标 `ArchiveGlyph`（DSH 同款归档 SVG：16px、1 描边、箱子 + 勾，见 §9.38） |
 
 `archive` 是唯一**会跨档**的写：其余写回原地合并，归档要把记录从全部/未完成/已完成挪到
 已归档（或反向）。因此 `store.setArchived()` 不做 `admit()`，而是先按旧记录减、再按新记录
@@ -586,6 +586,107 @@ async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
 - `pnpm build` 两遍通过，`pnpm typecheck` 通过，`pnpm test` 151 tests 全绿。
 - 产物内 base64 解码后与原 webp 的 sha256 一致；`emptyGlyph` 已不在产物里。
 - 用 headless Chrome 按 320px 面板宽度渲染日/夜两套主题核对：插画居中、文字间距正常。
+
+## §9.38 归档按钮改用 DSH 自带的归档图标
+
+待办 #1c7bd132：「目前图标头部比较重，导致视觉上感觉图标比文字高」。
+
+### §9.38.1 问题
+
+旧画法是本文件里手绘的 13px 图标：箱盖是一个比箱体宽的封闭圆角矩形
+（`y 3–6.1`、`stroke 1.3`）。13px 下盖子的上下两条横边只隔约 1.5px，抗锯齿后
+糊成一条深色横杠，图标的墨色全压在 16 格的上半部，底部的箱体只有细边和一个小
+箭头，压不住。于是眼睛按"上面那砣"定位，控件看起来浮在「归档」上方。
+
+### §9.38.2 决定：用 DSH 的 element，按行内 13px 居中
+
+用户给出 DSH 中的归档 SVG：
+
+```html
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="1">
+  <rect x="1.9" y="2.1" width="12.2" height="3.4" rx="1.1"></rect>
+  <path d="M2.95 5.7v4.8a2.9 2.9 0 0 0 2.9 2.9h4.3a2.9 2.9 0 0 0 2.9-2.9V5.7"></path>
+  <path d="m6 9.35 1.4 1.4 2.6-2.6"></path>
+</svg>
+```
+
+`ArchiveGlyph` 用它的三段几何，属性名换成 JSX 驼峰；尺寸跟同一行的手绘图标一样
+取 13px（`width/height="13"`，viewBox 仍是 16，所以 `stroke 1` 实际落成约 0.81px，
+比旧画法的 1.3 轻）。它解决旧画法的三个问题：
+
+- 盖子的两条横边在 13px 下间隔约 2px（3.4 单位的盖子），不再糊成一条深色带。
+- 箱体 `x 2.95–13.05` 只比盖 `x 1.9–14.1` 窄 1.05/边，读起来是"箱盖"而不是蘑菇头。
+- 内部是勾不是箭头：归档在 DSH 里就是"箱子 + 勾"，用同一套语义，不要改回箭头。
+
+但元素自身在画布里偏上：把描边算进去，墨色在 16 格里是 `y 1.6–13.9`，上边 1.6、
+下边 2.1；缩到 13px 后就是"顶部占满、底部空一截"。不重画路径，给三段几何套一个
+`<g transform="translate(0 0.3)">`：墨色变成上下各 1.9，中心从 7.75 落回 8.0，
+在 26px 按钮里居中后与 12px 文字的「中宫」齐平。
+
+### §9.38.3 复验
+
+- `pnpm build` 两遍通过，`pnpm test` 151 tests 全绿。
+- 13px 下按 10× 栅格（160px 画布）量墨色：`translate(0 0.3)` 前上 1.6 / 下 2.1，
+  之后上下各 1.9（单位为 16 格）。
+- headless Chrome 用真实 `.archiveBtn` 样式渲染 1x / 3x、日/夜、带字/纯图标
+  （窄面板隐藏 `.archiveBtn > span`）四种组合：盖子不再成带，图标与「归档」中宫对齐，
+  纯图标状态仍能读出箱子与勾。
+
+## §9.39 workbench_complete 不再记录验证结果
+
+用户要求待办总结里不要「验证结果」这一节，并且要改代码里的约定，而不是只靠调用方自觉。
+
+- 工具的 `parameters`、`WorkbenchCompletionInput` 与 `completionFromInput` 都删掉
+  `verification`；工具描述和写回提示词同步，不再要求模型附命令。
+- 替换记录时只比对 `changedFiles`：旧记录里的命令历史不再参与「少写即拒绝」的判定，
+  新契约里它不是必须重报的事实。文件仍然只增不减。
+- 兼容：`WorkbenchCompletion.verification` 改为可选，`storage.ts` 与
+  `typert.contract.ts` 继续接受旧记录里的数组，卡片仍显示旧记录的历史（用户选择保留
+  旧记录）。新写回没有该字段，这一节自然不出现。
+- 改动集中在 `types.ts`、`completion.ts`、`index.ts`、`storage.ts`、
+  `typert.contract.ts`、`client/write-back.ts`、`client/WorkbenchTab.tsx` 与两个
+  spec；`lib/` 产物已重建。
+
+## §9.40 折叠态不再被展开区的 padding 撑高
+
+「详情未展开时底部比顶部空」。原因不在流程空隙，而在 `.detail` 自己：它是
+`grid-template-rows: 0fr` 的网格项，但身上带着 `padding: 6px 0 2px`。网格项被压到 0
+高时，padding 不会跟着消失，折叠态于是仍站 8px，卡片底部就多出一条。
+
+- `padding` 移到内层 `.detailBody`；`.detail` 只留 `padding: 0`。内层内容随折叠一起被
+  `overflow: hidden` 裁掉，折叠高度真正为 0，展开时上下间距不变。
+- 保留 `visibility` 与常驻挂载（§9.18、§9.27）：这里只是让 0fr 真的是 0，不是改用
+  `display: none` 取消折叠动画。
+- 复验：等价结构在 headless Chrome 里量，折叠前 8px、折叠后 0；编译后的 CSS 里
+  `.detail` 为 `padding: 0`、`.detailBody` 为 `6px 0 2px`。`pnpm build` 与
+  `pnpm test`（152 tests）通过。
+
+## §9.41 标题行高度不随状态变化
+
+未完成 → 已完成切换时卡片抖一下。原因只在标题行：状态胶囊仅在 `open` 之后渲染，
+旧规则是 `height: 21px`（content-box）加 `0.5px` 边框，实际外高 22–23px；标题按钮是
+20px 行盒，于是同一行在有无胶囊时差 2–3px，整张卡跟着变高。
+
+- `.titleRow` 固定 `height: 20px`；`.statusPill` 改 `box-sizing: border-box`，
+  `height: 20px`。两者都落在标题的 20px 行盒里，状态切换不再改变标题行高度。
+- 复验：headless 量三组——无胶囊 20、旧胶囊 23、修后胶囊 20；`pnpm build` 与
+  `pnpm test`（153 tests）通过。
+
+## §9.42 状态标记改用设计图
+
+标题前的未完成 / 完成标记不再用 CSS 圆点，改用 image2.5 生成的两张设计图。
+
+- 素材：`todo.png`、`done.png`（1254²，透明底）。先按 alpha ≥ 8 去掉生图边缘的淡晕，
+  再把 8–255 映射回 0–255 保住抗锯齿；按内容裁切（todo 571×575，done 722×745），
+  补成正方形、缩到 128²，存为无损 WebP（4.1 KB / 10.4 KB）。
+- 接入：两张图都只当 alpha mask（`mask-image` + `background: currentColor`），
+  墨色仍由主题令牌给——未完成取 idle ink，完成取 accent，所以浅色 / 深色、归档
+  55% 透明都能自动适配。标记槽仍是 20px，图形 16px，四周各留 2px。
+- 已完成不再叠 `--wb-accent-soft` 光晕：徽章本身已是实心图形。进行中与新建
+  卡片仍保留原来的绿点 + 光晕（进行中没有对应的设计图）。
+- 校验：`pnpm build` 通过，`pnpm test` 156 tests；3× headless 预览确认 16px 下
+  齿边和镂空对勾仍可辨，深色主题下对勾透出卡片底色。
 
 ## §13.8 遗留欠账
 

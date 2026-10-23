@@ -28,6 +28,8 @@ import type { WorkspaceListSource } from './workspace-source.ts'
 import type { WriteBackQueued } from './write-back.ts'
 import css from './WorkbenchTab.module.css'
 import emptyArt from './assets/empty.webp'
+import doneMark from './assets/mark-done.webp'
+import todoMark from './assets/mark-todo.webp'
 
 /** What the slot's inject face supplies to the body. */
 export interface WorkbenchInjected {
@@ -588,6 +590,15 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
   )
 }
 
+/**
+ * The status artwork is an alpha mask: only its silhouette is used, and the ink
+ * comes from the element's `color`, so the generated marks follow the theme's
+ * idle ink and success green instead of carrying a fixed palette (§9.42).
+ */
+function glyphMask(src: string): { maskImage: string, WebkitMaskImage: string } {
+  return { maskImage: `url("${src}")`, WebkitMaskImage: `url("${src}")` }
+}
+
 /** Props shared by every card, including the composer's. */
 interface CardProps {
   readonly item: WorkItemRecord
@@ -641,10 +652,10 @@ function Card({
   return (
     <li className={classes.join(' ')}>
       <div className={css.cardHead}>
-        {/* The status mark: a dot in a soft halo, the composition the reference
-            design draws (§9.30). The slot is fixed at 22px so the description,
-            the meta row and the expanded area all line up on the body column
-            instead of on the card's own edge. */}
+        {/* The status mark: the generated todo and done seals, drawn as alpha
+            masks so they take the theme's ink (§9.42). In progress keeps the
+            quiet dot in its soft halo. The 20px slot is what indents the body
+            column, not a box around the artwork. */}
         <span
           className={[
             css.mark,
@@ -653,7 +664,11 @@ function Card({
           ].filter(Boolean).join(' ')}
           title={t('card.statusHint')}
         >
-          <span className={css.markDot} />
+          {item.status === 'done'
+            ? <span className={css.markGlyph} style={glyphMask(doneMark)} />
+            : item.status === 'in_progress'
+              ? <span className={css.markDot} />
+              : <span className={css.markGlyph} style={glyphMask(todoMark)} />}
         </span>
         <div className={css.cardBody}>
           {/* The heading line: the title, with the status pill on the trailing
@@ -826,7 +841,8 @@ function Card({
           fold is a `grid-template-rows` 0fr -> 1fr, and a collapsed card keeps the
           content out of the tab order through `visibility`, not by unmounting it. */}
       <div className={open ? `${css.detailWrap} ${css.detailOpen}` : css.detailWrap}>
-          <div className={css.detail}>
+        <div className={css.detail}>
+          <div className={css.detailBody}>
             {/* The expanded area's one rule, and it is labelled (§5.4). It is drawn
                 whether or not a summary exists, so the section keeps its name and the
                 line does not appear and disappear with the content behind it. */}
@@ -852,7 +868,7 @@ function Card({
                 archiving replaced it. The empty region stays declared so the fold
                 keeps one closing edge. */}
           </div>
-
+        </div>
       </div>
     </li>
   )
@@ -911,7 +927,9 @@ function Completion({ item, t }: { readonly item: WorkItemRecord; readonly t: Ca
         </div>
       )}
 
-      {completion.verification.length > 0 && (
+      {/* Legacy only: records written before the tool retired verification still
+          show theirs; new completions have no such field. */}
+      {completion.verification !== undefined && completion.verification.length > 0 && (
         <div className={css.completionBlock}>
           <p className={css.completionBlockTitle}>{t('completion.verification')}</p>
           <ul className={css.completionList}>
@@ -1193,32 +1211,34 @@ function SummaryGlyph(): ReactNode {
 }
 
 /**
- * Archive: a box with its lid laid flat and an arrow dropping into it (§9.31).
+ * Archive: DSH's archive glyph, at the row's 13px and centred in its box.
  *
- * Drawn at the same 13px/stroke-1.4 weight as the row's other glyphs, so the
- * control that replaced delete does not read as a different kind of thing.
+ * The supplied art sits 1.6 units from the top of the 16-unit grid and 2.2 from
+ * the bottom (stroke included), so at 13px the box looked top-full and left a
+ * gap under it. The group is nudged 0.3 down — geometry untouched — which puts
+ * 1.9 above and 1.9 below and lands the ink's centre on the box centre.
+ *
+ * The hand-drawn 13px box this replaces compressed its 3-unit lid into one dark
+ * band; DSH's element keeps the lid readable with its 1-unit stroke.
  */
 function ArchiveGlyph(): ReactNode {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect
-        x="2.4"
-        y="3"
-        width="11.2"
-        height="3.1"
-        rx="1"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.5 6.1v5.4a1.4 1.4 0 0 0 1.4 1.4h6.2a1.4 1.4 0 0 0 1.4-1.4V6.1"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M8 8.2v3.4M6.5 10.1L8 11.6l1.5-1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      strokeWidth="1"
+    >
+      <g transform="translate(0 0.3)">
+        <rect x="1.9" y="2.1" width="12.2" height="3.4" rx="1.1" />
+        <path d="M2.95 5.7v4.8a2.9 2.9 0 0 0 2.9 2.9h4.3a2.9 2.9 0 0 0 2.9-2.9V5.7" />
+        <path d="m6 9.35 1.4 1.4 2.6-2.6" />
+      </g>
     </svg>
   )
 }

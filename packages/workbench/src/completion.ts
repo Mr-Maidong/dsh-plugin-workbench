@@ -33,8 +33,10 @@ export type CompletionPlan =
  * assigns a status back (DESIGN.md §4.5), so this never re-opens an item. The
  * *record* is last-wins: a later call for the same item replaces the earlier one
  * (DESIGN.md §12.2), and the replacement may only add — a submission that drops
- * a file the earlier record names, or a command it ran, is refused, because a
- * record of fact must never become less true than it was.
+ * a file the earlier record names is refused, because a record of fact must never
+ * become less true than it was. Verification is not part of that check: the tool
+ * no longer records it, so a legacy record's commands are history, not a fact the
+ * new submission can be asked to repeat.
  *
  * Archiving is deliberately not a refusal: an archived item's workspace is gone,
  * but the item is still a live record and the write-back is still the only thing
@@ -47,7 +49,7 @@ export function planCompletion(record: WorkItemRecord, input: WorkbenchCompletio
   const earlier = record.completion
   if (earlier === undefined) return { kind: 'write', replaced: false }
   const dropped = droppedEntries(earlier, input)
-  if (dropped.files.length > 0 || dropped.commands.length > 0) {
+  if (dropped.files.length > 0) {
     return { kind: 'refuse', message: droppedEntriesMessage(earlier, dropped) }
   }
   return { kind: 'write', replaced: true }
@@ -70,7 +72,6 @@ export function completionFromInput(
     summary: input.summary,
     implementationPath: input.implementationPath,
     changedFiles: input.changedFiles,
-    verification: input.verification,
     completedAt: at,
     completedBy: 'model',
   }
@@ -95,45 +96,42 @@ export function completionInputError(input: WorkbenchCompletionInput): string | 
 /** The completion lists one call submits, as the drop check reads them. */
 export interface CompletionEntries {
   readonly changedFiles: readonly { readonly path: string }[]
-  readonly verification: readonly { readonly command: string }[]
 }
 
 /**
  * Entries an earlier completion carries that the submitted one would drop.
  *
- * Changed-file paths and verification commands are facts about what the task
- * did, so a replacement keeps every one of them; implementation steps are prose
- * and are not compared (DESIGN.md §4.4). A later call that quietly omits a file
- * would leave the record *less* true than before, which is the one direction a
- * record of fact must never move.
+ * Changed-file paths are facts about what the task did, so a replacement keeps
+ * every one of them; implementation steps are prose and are not compared
+ * (DESIGN.md §4.4). A later call that quietly omits a file would leave the record
+ * *less* true than before, which is the one direction a record of fact must never
+ * move. Legacy verification entries are not compared: the tool stopped recording
+ * them, so they cannot be a required part of a replacement.
  * @param earlier - the completion already stored for this item.
  * @param next - the lists this call submits.
- * @returns the dropped paths and commands, each empty when nothing is dropped.
+ * @returns the dropped paths, empty when nothing is dropped.
  */
 export function droppedEntries(
   earlier: WorkbenchCompletion,
   next: CompletionEntries,
-): { readonly files: readonly string[]; readonly commands: readonly string[] } {
+): { readonly files: readonly string[] } {
   const paths = new Set(next.changedFiles.map(file => file.path))
-  const commands = new Set(next.verification.map(item => item.command))
   return {
     files: earlier.changedFiles.filter(file => !paths.has(file.path)).map(file => file.path),
-    commands: earlier.verification.filter(item => !commands.has(item.command)).map(item => item.command),
   }
 }
 
 /**
  * The refusal for a call that would drop recorded entries.
  * @param earlier - the completion already stored for this item.
- * @param dropped - the paths and commands the submitted record omits.
- * @returns the model-facing message, naming only the lists that lost entries.
+ * @param dropped - the paths the submitted record omits.
+ * @returns the model-facing message naming the files that lost entries.
  */
 export function droppedEntriesMessage(
   earlier: WorkbenchCompletion,
-  dropped: { readonly files: readonly string[]; readonly commands: readonly string[] },
+  dropped: { readonly files: readonly string[] },
 ): string {
   const missing: string[] = []
   if (dropped.files.length > 0) missing.push(`files ${dropped.files.join(', ')}`)
-  if (dropped.commands.length > 0) missing.push(`commands ${dropped.commands.join(', ')}`)
-  return `workbench_complete would drop entries the earlier record for this item carries: ${missing.join('; ')}. Pass the whole-task record — a replacement keeps every file the task changed and every command it ran. The earlier record, written at ${earlier.completedAt}, said: ${earlier.summary}`
+  return `workbench_complete would drop entries the earlier record for this item carries: ${missing.join('; ')}. Pass the whole-task record — a replacement keeps every file the task changed. The earlier record, written at ${earlier.completedAt}, said: ${earlier.summary}`
 }

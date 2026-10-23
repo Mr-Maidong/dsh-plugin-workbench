@@ -73,6 +73,19 @@ describe('edit fields replace their display element box for box', () => {
     assert.equal(padX(field), '4px')
   })
 
+  it('keeps the heading line one height across every status', () => {
+    // The pill only renders once an item leaves `open`. While it was 21px of
+    // content plus a 0.5px border, the heading grew by 2-3px on completion —
+    // which is the card moving on every status change. The row and the pill now
+    // share the title's own 20px line box.
+    const text = rule('.titleText')
+    const row = rule('.titleRow')
+    const pill = rule('.statusPill')
+    assert.equal(px(row['height']), px(text['line-height']))
+    assert.equal(pill['box-sizing'], 'border-box')
+    assert.equal(px(pill['height']), px(text['line-height']))
+  })
+
   it('leaves a finished item\'s title at full strength (§9.30)', () => {
     // The reference's finished card is its most legible one, so the old dimming pair
     // (`.cardDone .titleText` + `.cardDone .fieldTitle`) is gone: completion is said

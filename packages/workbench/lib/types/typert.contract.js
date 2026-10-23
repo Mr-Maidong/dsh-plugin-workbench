@@ -89,7 +89,7 @@ const changedFileSchema = lazy(() => z.object({
     path: z.string(),
     purpose: z.string(),
 }).readonly());
-/** Mirrors {@link VerificationEntry}. */
+/** Mirrors the legacy half of {@link VerificationEntry}; new completions never carry it. */
 const verificationEntrySchema = lazy(() => z.object({
     command: z.string(),
     result: z.enum(['passed', 'failed', 'skipped']),
@@ -100,7 +100,7 @@ const completionSchema = lazy(() => z.object({
     summary: z.string(),
     implementationPath: z.array(z.string()).readonly(),
     changedFiles: z.array(changedFileSchema()).readonly(),
-    verification: z.array(verificationEntrySchema()).readonly(),
+    verification: z.array(verificationEntrySchema()).readonly().optional(),
     completedAt: z.string(),
     completedBy: z.enum(['model', 'user']),
 }).readonly());

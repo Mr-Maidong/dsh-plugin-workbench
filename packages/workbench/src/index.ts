@@ -200,13 +200,12 @@ export class WorkbenchService extends TypertRemoteService {
   private registerCompleteTool(ctx: Context): void {
     ctx.tools.register(defineTool({
       name: 'workbench_complete',
-      description: 'Write the completion record for one workbench work item. Echo the id from the request exactly. Call only after the task is actually done, and report only verification commands that were actually run. Each call records the whole task: a later call for the same id replaces the earlier record, so rewrite the summary, the implementation path, the changed files, and the verification to cover everything the task did — every requirement and every later correction — not only the latest change. A replacement that drops a file or a command the earlier record already carries is rejected.',
+      description: 'Write the completion record for one workbench work item. Echo the id from the request exactly. Call only after the task is actually done. Each call records the whole task: a later call for the same id replaces the earlier record, so rewrite the summary, the implementation path, and the changed files to cover everything the task did — every requirement and every later correction — not only the latest change. A replacement that drops a file the earlier record already carries is rejected.',
       parameters: {
         id: { type: 'string', required: true, description: 'Work item id, echoed from the request.' },
         summary: { type: 'string', required: true, description: 'Complete result summary for the whole task, not only the latest change.' },
         implementationPath: { type: 'array', required: true, items: { type: 'string' }, description: 'Every implementation step of the task, not only the latest change.' },
         changedFiles: { type: 'array', required: true, description: 'Every file the task changed; a later call keeps the earlier entries.', items: { type: 'object', additionalProperties: false, properties: { path: { type: 'string', required: true }, purpose: { type: 'string', required: true } } } },
-        verification: { type: 'array', required: true, description: 'Every command the task actually ran; a later call keeps the earlier entries.', items: { type: 'object', additionalProperties: false, properties: { command: { type: 'string', required: true }, result: { type: 'string', required: true, enum: ['passed', 'failed', 'skipped'] }, note: { type: 'string' } } } },
       },
       output: {
         schema: {
@@ -237,7 +236,6 @@ export class WorkbenchService extends TypertRemoteService {
           summary: args.summary.trim(),
           implementationPath: args.implementationPath,
           changedFiles: args.changedFiles,
-          verification: args.verification,
         }
         const empty = completionInputError(input)
         if (empty !== undefined) throw new Error(empty)

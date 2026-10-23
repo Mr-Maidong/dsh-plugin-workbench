@@ -1,4 +1,4 @@
-import { n as PACKAGE_NAME, t as INVOCATIONS } from "./typert.contract-mNsUgZm4.js";
+import { n as PACKAGE_NAME, t as INVOCATIONS } from "./typert.contract-C73Yv2yp.js";
 //#region packages/workbench/lib/types/typert.remote-client.js
 /**
 * Hand-maintained Client-face Remote artifact — normally generated, see

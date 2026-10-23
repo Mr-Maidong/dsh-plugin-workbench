@@ -20,14 +20,20 @@ export type WorkItemId = string & {
  * except by handing over a completion.
  */
 export type WorkItemStatus = 'open' | 'in_progress' | 'done';
-/** What one verification step reported. */
+/** What one verification step reported (legacy records only). */
 export type VerificationResult = 'passed' | 'failed' | 'skipped';
 /** One changed file, and why it changed. */
 export interface ChangedFile {
     readonly path: string;
     readonly purpose: string;
 }
-/** One verification command and its outcome. */
+/**
+ * One verification command and its outcome.
+ *
+ * Legacy: `workbench_complete` no longer accepts or records verification
+ * (DESIGN.md §11), so a record written now never carries this. The type stays
+ * so records written before the change still decode and display their history.
+ */
 export interface VerificationEntry {
     readonly command: string;
     readonly result: VerificationResult;
@@ -46,7 +52,8 @@ export interface WorkbenchCompletion {
     /** The implementation path, in the order it was taken. */
     readonly implementationPath: readonly string[];
     readonly changedFiles: readonly ChangedFile[];
-    readonly verification: readonly VerificationEntry[];
+    /** Legacy history; present only on records written before verification was retired. */
+    readonly verification?: readonly VerificationEntry[];
     /** ISO-8601 UTC with millisecond precision, stamped by the executor. */
     readonly completedAt: string;
     /** `'model'` = written back by a model; `'user'` = marked complete by the user. Display copy only. */
@@ -54,14 +61,14 @@ export interface WorkbenchCompletion {
 }
 /**
  * What a tool submits as a completion: {@link WorkbenchCompletion} without the
- * two executor-owned fields, so a model cannot invent its own completion time
- * or claim a human marked it done.
+ * two executor-owned fields and without the retired verification history, so a
+ * model cannot invent its own completion time, claim a human marked it done, or
+ * record verification the tool no longer accepts.
  */
 export interface WorkbenchCompletionInput {
     readonly summary: string;
     readonly implementationPath: readonly string[];
     readonly changedFiles: readonly ChangedFile[];
-    readonly verification: readonly VerificationEntry[];
 }
 /** One work item as the browser half renders it. */
 export interface WorkItemRecord {

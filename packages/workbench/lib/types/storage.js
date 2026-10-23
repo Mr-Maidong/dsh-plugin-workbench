@@ -19,25 +19,31 @@ const changedFileSchema = z.object({
     path: z.string().min(1),
     purpose: z.string(),
 }).strict();
+/** Legacy: records written before `workbench_complete` retired verification still decode. */
 const verificationEntrySchema = z.object({
     command: z.string().min(1),
     result: z.enum(['passed', 'failed', 'skipped']),
     note: z.string().optional(),
 }).strict();
 /**
- * `archived` is defaulted rather than required so a record written before
- * archiving existed decodes as active. The default is the value that preserves
- * current behaviour, not the value that is most likely to be wanted later.
+ * `verification` is optional because records written before `workbench_complete`
+ * retired it still carry it; dropping the field from the schema would make those
+ * records unreadable. New completions never write it.
  */
 const completionSchema = z.object({
     summary: z.string(),
     implementationPath: z.array(z.string()),
     changedFiles: z.array(changedFileSchema),
-    verification: z.array(verificationEntrySchema),
+    verification: z.array(verificationEntrySchema).optional(),
     completedAt: instantSchema,
     completedBy: z.enum(['model', 'user']),
 }).strict();
-/** The stored work-item shape, kept in step with {@link WorkItemRecord} by the decoder below. */
+/**
+ * The stored work-item shape, kept in step with {@link WorkItemRecord} by the
+ * decoder below. `archived` is defaulted rather than required so a record
+ * written before archiving existed decodes as active; the default preserves
+ * current behaviour, not the value most likely to be wanted later.
+ */
 const workItemRecordSchema = z.object({
     id: z.string().min(1),
     workspaceId: z.string(),
@@ -73,7 +79,9 @@ function decodeWorkItemRecord(value) {
                     summary: value.completion.summary,
                     implementationPath: value.completion.implementationPath,
                     changedFiles: value.completion.changedFiles,
-                    verification: value.completion.verification,
+                    ...value.completion.verification === undefined
+                        ? {}
+                        : { verification: value.completion.verification },
                     completedAt: value.completion.completedAt,
                     completedBy: value.completion.completedBy,
                 },

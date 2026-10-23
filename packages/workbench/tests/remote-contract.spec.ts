@@ -224,11 +224,17 @@ describe('Remote contract', () => {
       status: 'done', archived: false, updateAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z',
       completion: {
         summary: 's', implementationPath: ['a'], changedFiles: [{ path: 'a', purpose: 'p' }],
-        verification: [{ command: 'c', result: 'passed' }],
         completedAt: '2024-01-01T00:00:00.000Z', completedBy: 'model',
       },
     }
     assert.deepEqual(schema.parse({ code: 'ok', item }), { code: 'ok', item })
+    // A record written before verification was retired still crosses the boundary
+    // with its history; new completions simply omit the field.
+    const legacy = {
+      ...item,
+      completion: { ...item.completion, verification: [{ command: 'c', result: 'passed' }] },
+    }
+    assert.deepEqual(schema.parse({ code: 'ok', item: legacy }), { code: 'ok', item: legacy })
     assert.throws(() => schema.parse({ code: 'ok', item: { ...item, status: 'not-a-status' } }))
     assert.throws(() => schema.parse({ code: 'ok', item: { ...item, completion: { summary: 's' } } }))
 

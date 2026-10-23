@@ -471,13 +471,12 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 }
 
 /*
- * The status mark: a dot in a soft halo, the composition the reference draws.
+ * The status mark: the generated todo and done seals in a 20px slot.
  *
- * A 20px slot — the halo — holding an 8px dot. Open items carry the dot alone, in
- * the idle ink, because "nothing has happened yet" should not glow; a finished
- * item and the composer fill the slot with 15% of the accent and take the accent
- * for the dot itself. Status used to be a 15px ring; the halo reads at the same
- * glance and gives the card its one piece of deliberate softness.
+ * The artwork is an alpha mask, so it keeps the design's silhouette while the
+ * ink comes from `currentColor`: idle for an open item, the accent for a
+ * finished one (§9.42). In progress keeps the quiet dot in its soft halo — the
+ * one state that is still drawn in CSS rather than supplied as artwork.
  */
 .mark {
   flex: none;
@@ -499,7 +498,26 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   background: currentColor;
 }
 
-.markDone,
+/* The mask's own box: 16px inside the 20px slot, leaving 2px of air on every
+   side so the seal never crowds the title's line box. */
+.markGlyph {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* A finished item's seal is solid artwork: no halo behind it. */
+.markDone {
+  color: var(--wb-accent);
+}
+
 .markBusy {
   background: var(--wb-accent-soft);
   color: var(--wb-accent);
@@ -524,6 +542,11 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   align-items: center;
   gap: 6px;
   min-width: 0;
+  /* Pinned to the title's 20px line box: the pill used to be 21px of content plus
+     its 0.5px border, so a finished card's heading stood 2-3px taller than an open
+     one and every status change moved the content below it. Both children now
+     fit inside the same 20px. */
+  height: 20px;
 }
 
 /*
@@ -711,7 +734,11 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   align-items: center;
   gap: 4px;
   flex: none;
-  height: 21px;
+  /* border-box and 20px: the pill shares the title's line box exactly. The old
+     21px content box plus a 0.5px border made the heading taller only when the
+     pill was present, which is what moved the card on every status change. */
+  box-sizing: border-box;
+  height: 20px;
   padding: 0 8px 0 6px;
   border: 0.5px solid transparent;
   border-radius: 999px;
@@ -1297,8 +1324,18 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
    used to be indented to the body column at 29px, which put a summary in a
    narrower column than the meta line above it and left the empty state's icon
    floating. `6px 0 2px` is the reference's own spacing for the block — air above
-   the divider, the card's padding below. */
+   the divider, the card's padding below.
+ *
+ * That spacing lives on `.detailBody`, not here. `.detail` is the grid item that
+ * folds to `0fr`; a padded grid item still stands as tall as its padding even
+ * when the row is 0, so a collapsed card carried an 8px strip under its content.
+ * The inner block is clipped with the rest, and the folded area really is 0. */
 .detail {
+  padding: 0;
+}
+
+/* The expanded area's own padding; see `.detail` above. */
+.detailBody {
   padding: 6px 0 2px;
 }
 

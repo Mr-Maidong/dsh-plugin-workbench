@@ -104,6 +104,15 @@ describe('the card animates its height and its disclosure control', () => {
     assert.ok(!('max-height' in rule('.detailOpen > .detail')), 'the cap must not leave with the class')
   })
 
+  it('folds to zero: the region padding lives inside, not on the grid item', () => {
+    // A padded grid item still stands as tall as its padding under `0fr`, so the
+    // collapsed card carried an 8px strip under its content. The padding moved to
+    // an inner block, which the fold clips along with everything else.
+    assert.equal(rule('.detail')['padding'], '0')
+    assert.equal(rule('.detailBody')['padding'], '6px 0 2px')
+    assert.ok(markup.includes('css.detailBody'), 'the padded block is the inner one')
+  })
+
   it('keeps a collapsed card out of the tab order without unmounting it', () => {
     // `visibility`, not `display` and not unmounting: the fold needs a live subtree,
     // and an invisible delete button must not stay focusable behind it.

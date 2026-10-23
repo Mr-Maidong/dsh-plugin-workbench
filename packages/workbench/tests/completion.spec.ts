@@ -45,13 +45,12 @@ function record(overrides: Partial<WorkItemRecord> = {}): WorkItemRecord {
   } as WorkItemRecord
 }
 
-/** A completion the model submitted, covering one file and one command. */
+/** A completion the model submitted, covering one file. */
 function submitted(overrides: Partial<WorkbenchCompletionInput> = {}): WorkbenchCompletionInput {
   return {
     summary: '接上了写回链路。',
     implementationPath: ['先在 Host 注册工具', '再在客户端排队提示词'],
     changedFiles: [{ path: 'packages/workbench/src/completion.ts', purpose: '写回决策' }],
-    verification: [{ command: 'pnpm test', result: 'passed' }],
     ...overrides,
   }
 }
@@ -87,7 +86,7 @@ describe('completion decisions', () => {
     assert.deepEqual(planCompletion(record({ status: 'open' }), submitted()), { kind: 'write', replaced: false })
   })
 
-  it('replaces an earlier record that still covers every file and command', () => {
+  it('replaces an earlier record that still covers every file', () => {
     // Last-wins on the record (§12.2): the status is terminal, the summary is not,
     // so a later call may complete the prose without losing the facts.
     const earlier = stored()
@@ -96,6 +95,20 @@ describe('completion decisions', () => {
       submitted({ summary: '接上了写回链路，并补了规格测试。' }),
     )
     assert.deepEqual(plan, { kind: 'write', replaced: true })
+  })
+
+  it('never writes verification, including when replacing a legacy record', () => {
+    // The retired field stays readable on old records but is not part of what a
+    // write-back stores; a replacement may therefore omit it without a refusal.
+    assert.ok(!('verification' in completionFromInput(submitted(), '2026-02-03T04:05:06.000Z')))
+    const legacy = {
+      ...stored(),
+      verification: [{ command: 'pnpm test', result: 'passed' as const }],
+    }
+    assert.deepEqual(
+      planCompletion(record({ status: 'done', completion: legacy }), submitted()),
+      { kind: 'write', replaced: true },
+    )
   })
 
   it('refuses a replacement that would drop a recorded file', () => {
@@ -110,14 +123,6 @@ describe('completion decisions', () => {
     assert.ok(plan.kind === 'refuse' && plan.message.includes(earlier.completedAt))
   })
 
-  it('refuses a replacement that would drop a recorded command', () => {
-    const plan = planCompletion(record({ status: 'done', completion: stored() }), submitted({
-      verification: [],
-    }))
-    assert.equal(plan.kind, 'refuse')
-    assert.ok(plan.kind === 'refuse' && plan.message.includes('pnpm test'))
-  })
-
   it('does not treat an archived item as unwritable', () => {
     // §4.7: archiving follows the workspace, not the work. An archived item is
     // still the user's record, and a write-back is still the only way to finish it.
@@ -130,13 +135,11 @@ describe('completion decisions', () => {
   it('compares only facts, and reports only what is missing', () => {
     const earlier = stored()
     const none = droppedEntries(earlier, submitted({ summary: '别的措辞' }))
-    assert.deepEqual(none, { files: [], commands: [] })
+    assert.deepEqual(none, { files: [] })
     const some = droppedEntries(earlier, {
       changedFiles: [],
-      verification: [{ command: 'pnpm build' }],
     })
     assert.deepEqual(some.files, ['packages/workbench/src/completion.ts'])
-    assert.deepEqual(some.commands, ['pnpm test'])
   })
 
   it('asks for the whole task, naming the item the tool echoes back', () => {
@@ -145,6 +148,7 @@ describe('completion decisions', () => {
     assert.ok(prompt.includes('接上写回链路'))
     assert.ok(prompt.includes('workbench_complete'))
     assert.ok(prompt.includes('不要重新执行任务'), 'a write-back records work, it does not redo it')
+    assert.ok(!prompt.includes('验证结果'), 'verification is no longer part of the record (§11)')
   })
 })
 

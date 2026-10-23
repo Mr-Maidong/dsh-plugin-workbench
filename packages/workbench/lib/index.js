@@ -14,8 +14,10 @@ import { defineDomain, domainTable } from "@deepseek-ai/dsh-storage-domain";
 * assigns a status back (DESIGN.md §4.5), so this never re-opens an item. The
 * *record* is last-wins: a later call for the same item replaces the earlier one
 * (DESIGN.md §12.2), and the replacement may only add — a submission that drops
-* a file the earlier record names, or a command it ran, is refused, because a
-* record of fact must never become less true than it was.
+* a file the earlier record names is refused, because a record of fact must never
+* become less true than it was. Verification is not part of that check: the tool
+* no longer records it, so a legacy record's commands are history, not a fact the
+* new submission can be asked to repeat.
 *
 * Archiving is deliberately not a refusal: an archived item's workspace is gone,
 * but the item is still a live record and the write-back is still the only thing
@@ -31,7 +33,7 @@ function planCompletion(record, input) {
 		replaced: false
 	};
 	const dropped = droppedEntries(earlier, input);
-	if (dropped.files.length > 0 || dropped.commands.length > 0) return {
+	if (dropped.files.length > 0) return {
 		kind: "refuse",
 		message: droppedEntriesMessage(earlier, dropped)
 	};
@@ -54,7 +56,6 @@ function completionFromInput(input, at = (/* @__PURE__ */ new Date()).toISOStrin
 		summary: input.summary,
 		implementationPath: input.implementationPath,
 		changedFiles: input.changedFiles,
-		verification: input.verification,
 		completedAt: at,
 		completedBy: "model"
 	};
@@ -74,34 +75,30 @@ function completionInputError(input) {
 /**
 * Entries an earlier completion carries that the submitted one would drop.
 *
-* Changed-file paths and verification commands are facts about what the task
-* did, so a replacement keeps every one of them; implementation steps are prose
-* and are not compared (DESIGN.md §4.4). A later call that quietly omits a file
-* would leave the record *less* true than before, which is the one direction a
-* record of fact must never move.
+* Changed-file paths are facts about what the task did, so a replacement keeps
+* every one of them; implementation steps are prose and are not compared
+* (DESIGN.md §4.4). A later call that quietly omits a file would leave the record
+* *less* true than before, which is the one direction a record of fact must never
+* move. Legacy verification entries are not compared: the tool stopped recording
+* them, so they cannot be a required part of a replacement.
 * @param earlier - the completion already stored for this item.
 * @param next - the lists this call submits.
-* @returns the dropped paths and commands, each empty when nothing is dropped.
+* @returns the dropped paths, empty when nothing is dropped.
 */
 function droppedEntries(earlier, next) {
 	const paths = new Set(next.changedFiles.map((file) => file.path));
-	const commands = new Set(next.verification.map((item) => item.command));
-	return {
-		files: earlier.changedFiles.filter((file) => !paths.has(file.path)).map((file) => file.path),
-		commands: earlier.verification.filter((item) => !commands.has(item.command)).map((item) => item.command)
-	};
+	return { files: earlier.changedFiles.filter((file) => !paths.has(file.path)).map((file) => file.path) };
 }
 /**
 * The refusal for a call that would drop recorded entries.
 * @param earlier - the completion already stored for this item.
-* @param dropped - the paths and commands the submitted record omits.
-* @returns the model-facing message, naming only the lists that lost entries.
+* @param dropped - the paths the submitted record omits.
+* @returns the model-facing message naming the files that lost entries.
 */
 function droppedEntriesMessage(earlier, dropped) {
 	const missing = [];
 	if (dropped.files.length > 0) missing.push(`files ${dropped.files.join(", ")}`);
-	if (dropped.commands.length > 0) missing.push(`commands ${dropped.commands.join(", ")}`);
-	return `workbench_complete would drop entries the earlier record for this item carries: ${missing.join("; ")}. Pass the whole-task record — a replacement keeps every file the task changed and every command it ran. The earlier record, written at ${earlier.completedAt}, said: ${earlier.summary}`;
+	return `workbench_complete would drop entries the earlier record for this item carries: ${missing.join("; ")}. Pass the whole-task record — a replacement keeps every file the task changed. The earlier record, written at ${earlier.completedAt}, said: ${earlier.summary}`;
 }
 //#endregion
 //#region packages/workbench/lib/types/storage.js
@@ -126,6 +123,7 @@ const changedFileSchema = z.object({
 	path: z.string().min(1),
 	purpose: z.string()
 }).strict();
+/** Legacy: records written before `workbench_complete` retired verification still decode. */
 const verificationEntrySchema = z.object({
 	command: z.string().min(1),
 	result: z.enum([
@@ -136,19 +134,24 @@ const verificationEntrySchema = z.object({
 	note: z.string().optional()
 }).strict();
 /**
-* `archived` is defaulted rather than required so a record written before
-* archiving existed decodes as active. The default is the value that preserves
-* current behaviour, not the value that is most likely to be wanted later.
+* `verification` is optional because records written before `workbench_complete`
+* retired it still carry it; dropping the field from the schema would make those
+* records unreadable. New completions never write it.
 */
 const completionSchema = z.object({
 	summary: z.string(),
 	implementationPath: z.array(z.string()),
 	changedFiles: z.array(changedFileSchema),
-	verification: z.array(verificationEntrySchema),
+	verification: z.array(verificationEntrySchema).optional(),
 	completedAt: instantSchema,
 	completedBy: z.enum(["model", "user"])
 }).strict();
-/** The stored work-item shape, kept in step with {@link WorkItemRecord} by the decoder below. */
+/**
+* The stored work-item shape, kept in step with {@link WorkItemRecord} by the
+* decoder below. `archived` is defaulted rather than required so a record
+* written before archiving existed decodes as active; the default preserves
+* current behaviour, not the value most likely to be wanted later.
+*/
 const workItemRecordSchema = z.object({
 	id: z.string().min(1),
 	workspaceId: z.string(),
@@ -181,7 +184,7 @@ function decodeWorkItemRecord(value) {
 			summary: value.completion.summary,
 			implementationPath: value.completion.implementationPath,
 			changedFiles: value.completion.changedFiles,
-			verification: value.completion.verification,
+			...value.completion.verification === void 0 ? {} : { verification: value.completion.verification },
 			completedAt: value.completion.completedAt,
 			completedBy: value.completion.completedBy
 		} }
@@ -1011,7 +1014,7 @@ let WorkbenchService = (() => {
 		registerCompleteTool(ctx) {
 			ctx.tools.register(defineTool({
 				name: "workbench_complete",
-				description: "Write the completion record for one workbench work item. Echo the id from the request exactly. Call only after the task is actually done, and report only verification commands that were actually run. Each call records the whole task: a later call for the same id replaces the earlier record, so rewrite the summary, the implementation path, the changed files, and the verification to cover everything the task did — every requirement and every later correction — not only the latest change. A replacement that drops a file or a command the earlier record already carries is rejected.",
+				description: "Write the completion record for one workbench work item. Echo the id from the request exactly. Call only after the task is actually done. Each call records the whole task: a later call for the same id replaces the earlier record, so rewrite the summary, the implementation path, and the changed files to cover everything the task did — every requirement and every later correction — not only the latest change. A replacement that drops a file the earlier record already carries is rejected.",
 				parameters: {
 					id: {
 						type: "string",
@@ -1045,31 +1048,6 @@ let WorkbenchService = (() => {
 									type: "string",
 									required: true
 								}
-							}
-						}
-					},
-					verification: {
-						type: "array",
-						required: true,
-						description: "Every command the task actually ran; a later call keeps the earlier entries.",
-						items: {
-							type: "object",
-							additionalProperties: false,
-							properties: {
-								command: {
-									type: "string",
-									required: true
-								},
-								result: {
-									type: "string",
-									required: true,
-									enum: [
-										"passed",
-										"failed",
-										"skipped"
-									]
-								},
-								note: { type: "string" }
 							}
 						}
 					}
@@ -1107,8 +1085,7 @@ let WorkbenchService = (() => {
 					const input = {
 						summary: args.summary.trim(),
 						implementationPath: args.implementationPath,
-						changedFiles: args.changedFiles,
-						verification: args.verification
+						changedFiles: args.changedFiles
 					};
 					const empty = completionInputError(input);
 					if (empty !== void 0) throw new Error(empty);

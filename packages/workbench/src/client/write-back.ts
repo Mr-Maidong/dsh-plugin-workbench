@@ -37,7 +37,7 @@ import type { WorkItemRecord } from 'dsh-plugin-workbench/types'
  * @returns the message text.
  */
 export function writeBackPrompt(record: WorkItemRecord): string {
-  return `工作项「${record.title}」（id ${record.id}）已经执行。请调用 workbench_complete，把这条工作项从开始到现在的完整成果（整体方案、实现路径、修改文件与验证结果，含后续追加的修正）一次性写回；不要只写最后一轮改动，也不要重新执行任务。`
+  return `工作项「${record.title}」（id ${record.id}）已经执行。请调用 workbench_complete，把这条工作项从开始到现在的完整成果（整体方案、实现路径与修改文件，含后续追加的修正）一次性写回；不要只写最后一轮改动，也不要重新执行任务。`
 }
 
 /** What the mount reports back about one queued write-back turn. */

@@ -219,9 +219,7 @@ const chips = (active = '') => `<div class="${cls('toolbar')}">
     ['已完成', 5, 'done'],
     ['已归档', 2, 'archived'],
   ].map(([label, count, tier]) => `<button type="button" class="${cls('chip',
-    tier === 'done' && 'chipDone',
-    tier === 'archived' && 'chipArchived',
-    tier === active && 'chipActive')}">${label}<span class="${cls('chipCount')}">${count}</span></button>`).join('')}
+    tier === active && 'chipActive')}"${tier === active ? ' aria-pressed="true"' : ''}>${label}<span class="${cls('chipCount')}">${count}</span></button>`).join('')}
   </div>
 </div>`
 

@@ -200,36 +200,18 @@
 }
 
 /*
- * §9.35 — the two record tiers are tinted even when unselected.
+ * §9.35 — one chip, one fill, and only while it is the current filter.
  *
- * 全部 and 未完成 are the daily view: they carry no fill until they are the
- * current filter, which keeps the row quiet. 已完成 and 已归档 are the two tiers
- * the list is *not* usually on, so they get a standing tint of their own — a
- * soft green for the finished one (the same accent the card already spends on its
- * dot and pill) and a neutral grey for the filed-away one (filing is not an
- * achievement). Both are two steps lighter than the washes the row used before:
- * 9% and 6% instead of a solid `bg-layer-1`, which on the sidebar's fill read as
- * no fill at all.
+ * The row draws no fill at rest: 全部 / 未完成 / 已完成 / 已归档 are all plain text
+ * over the pane, so none of them can be mistaken for the current one. The first
+ * attempt gave the two record tiers a standing tint, which read as "already
+ * selected" and made three chips look lit at once. Selection is the only thing
+ * that fills a chip, and `filter` is a single value in the store, so exactly one
+ * can be filled at a time.
  *
- * Order matters: `.chipActive` comes last, so picking either tier still turns it
- * into the one brand-coloured chip and the row keeps a single "you are here".
+ * Every wash here is two steps lighter than the row's first version: the current
+ * filter is a 9% brand mix (was 14%) and its hover 13% (was 20%).
  */
-.chipDone {
-  background: color-mix(in srgb, var(--wb-accent) 9%, transparent);
-}
-
-.chipDone:hover {
-  background: color-mix(in srgb, var(--wb-accent) 14%, transparent);
-}
-
-.chipArchived {
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);
-}
-
-.chipArchived:hover {
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
-}
-
 .chipActive {
   background: var(--wb-accent-wash);
   color: var(--wb-business);

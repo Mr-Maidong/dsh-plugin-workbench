@@ -427,11 +427,11 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
               type="button"
               className={[
                 css.chip,
-                // §9.35: the two record tiers keep a standing tint when unselected.
-                tier === 'done' && css.chipDone,
-                tier === 'archived' && css.chipArchived,
+                // §9.35: only the current filter is filled. The store keeps one
+                // tier, so this can light at most one chip.
                 tier === snapshot.filter && css.chipActive,
               ].filter(Boolean).join(' ')}
+              aria-pressed={tier === snapshot.filter}
               onClick={() => {
                 setEditing({ kind: 'none' })
                 store.setFilter(tier)

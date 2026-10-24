@@ -257,6 +257,21 @@ describe('write-back wiring', () => {
     )
   })
 
+  it('holds a changed-file path to a fifth of the row, with the full value on overflow', () => {
+    // The path column is fixed so the purpose beside it keeps the rest of the
+    // row; a path too deep for the column is cut with an ellipsis and the full
+    // value becomes the hover tooltip. The tooltip is conditional because
+    // repeating a path that already fits only adds noise.
+    assert.ok(tab.includes('<FilePath path={file.path} />'), 'the file row renders the clipped path')
+    assert.ok(tab.includes('element.scrollWidth > element.clientWidth + 1'), 'clip is measured, not guessed')
+    assert.ok(tab.includes('disabled={!clipped}'), 'a path that fits gets no bubble')
+    const start = css.indexOf('.filePath {')
+    assert.ok(start >= 0, 'the path column is declared')
+    const rule = css.slice(start, css.indexOf('}', start) + 1)
+    assert.ok(rule.includes('flex: 0 0 20%'), 'the column is a fixed fifth of the row')
+    assert.ok(rule.includes('overflow: hidden') && rule.includes('text-overflow: ellipsis'))
+  })
+
   it('shows each 全部 group whenever its own tier has items (§9.26)', () => {
     // 全部 has two groups; §5.4 pins only the *headings* to "both groups exist".
     // The old guard drew the finished group only beside a live one, so a

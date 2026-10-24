@@ -287,10 +287,27 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 14px 14px 24px;
+  /* §9.45: the bar is inset from the pane's right and bottom edges. The 6px
+     margin moves the whole scrollport; padding-right and padding-bottom drop by
+     the same 6px, so the cards keep their old width and their 24px bottom air. */
+  margin: 0 6px 6px 0;
+  padding: 14px 8px 18px 14px;
+  /* §9.46: fade the list into the pane at both ends. The stop lengths match the
+     top and bottom padding, so at rest the first and last cards sit entirely in
+     the opaque part; once the list scrolls, cards dissolve through these bands
+     instead of being cut by a hard edge. A mask fades to the pane's own colour
+     without naming it, which matters because the sidebar fill is a token the
+     pane does not own. */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 14px,
+    #000 calc(100% - 18px),
+    transparent 100%
+  );
   scrollbar-gutter: stable;
   /* §9.25: the expanded area's cap is measured against the visible working set,
-     so this scroller is the size container the cap reads (`50cqh`). Its height
+     so this scroller is the size container the cap reads (`40cqh`). Its height
      is already definite — flex item within the pane — and a scroll container's
      own height never depends on its content, which is what the containment
      this declaration adds requires. */
@@ -656,7 +673,7 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-top: 12px;
+  margin-top: 6px;
   margin-left: -26px;
   min-width: 0;
   /* The same ink as the description: the reference sets the project line at body
@@ -822,7 +839,7 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 14px;
+  margin-top: 6px;
   margin-left: -26px;
 }
 
@@ -1245,23 +1262,32 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
    instant the fold begins, and the row's interpolated start point would jump
    from the capped height to the uncapped content height, making the card
    suddenly taller while the list scrollbar flickers. Capped at every style,
-   the fold starts from the height the open state actually had. */
+   the fold starts from the height the open state actually had.
+   §9.44: the cap is 80% of the old 50cqh, so 40cqh. */
 .detailWrap > .detail {
   overflow: hidden;
   min-height: 0;
-  max-height: 50cqh;
+  max-height: 40cqh;
   visibility: hidden;
-  /* §9.33: the lane is reserved at EVERY style, folded or not, so the text
-     column is already 6px narrower before the bar can possibly appear. This is
-     what stops the width jump the accept pass caught: without it the summary
-     reflows the instant the thumb arrives. */
-  scrollbar-gutter: stable;
   transition: visibility 0s linear 240ms;
 }
 
 .detailOpen {
   grid-template-rows: 1fr;
   transition: grid-template-rows 380ms var(--wb-jelly);
+}
+
+/*
+ * §9.44 — the labelled divider is the section's fixed edge.
+ *
+ * The expanded area is a column: `.completionDivider` first, then
+ * `.detailScroll`. Only the scroll block can move, so the rule stays put while
+ * the summary below it scrolls. The old version scrolled `.detail` itself,
+ * which carried the divider off the top of the box.
+ */
+.detailOpen > .detail {
+  visibility: visible;
+  transition: visibility 0s;
 }
 
 /*
@@ -1275,19 +1301,24 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
  * the spring (380ms) has landed. `forwards` keeps it — the computed `overflow-y`
  * stays `auto` after the animation ends, because `overflow` is a discrete
  * property and this is the one reliable way to say "…and then, settle".
+ *
+ * §9.44 moved the scroll container from `.detail` to this block, so the delayed
+ * hand-off and its gutter travel with the part that actually scrolls.
  */
-.detailOpen > .detail {
-  visibility: visible;
-  transition: visibility 0s;
+.detailScroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-x: clip;
+  overflow-y: hidden;
+  /* §9.33: the lane is reserved at EVERY style, folded or not, so the text
+     column is already 6px narrower before the bar can possibly appear. This is
+     what stops the width jump the accept pass caught: without it the summary
+     reflows the instant the thumb arrives. */
+  scrollbar-gutter: stable;
+}
+
+.detailOpen > .detail .detailScroll {
   animation: wb-detail-scrollable 1ms linear 400ms forwards;
-  /* §9.31.9: the bar is a permanent fixture of the section, not an overlay that
-     materialises on hover. The explicit `::-webkit-scrollbar` rules pin a thin,
-     always-drawn thumb instead of whatever the host's overlay style would do.
-     Deliberately no `scrollbar-width` / `scrollbar-color`: Chrome prefers those
-     standard properties when present and then ignores the `::-webkit-scrollbar`
-     block below, which is how the track keeps its rounded thumb. Nothing here
-     runs outside Chromium, so the webkit path is the only path. */
 }
 
 @keyframes wb-detail-scrollable {
@@ -1296,28 +1327,35 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   }
 }
 
-.detailOpen > .detail::-webkit-scrollbar {
+/* §9.31.9: the bar is a permanent fixture of the section, not an overlay that
+   materialises on hover. The explicit `::-webkit-scrollbar` rules pin a thin,
+   always-drawn thumb instead of whatever the host's overlay style would do.
+   Deliberately no `scrollbar-width` / `scrollbar-color`: Chrome prefers those
+   standard properties when present and then ignores the `::-webkit-scrollbar`
+   block below, which is how the track keeps its rounded thumb. Nothing here
+   runs outside Chromium, so the webkit path is the only path. */
+.detailScroll::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.detailOpen > .detail::-webkit-scrollbar-track {
+.detailScroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.detailOpen > .detail::-webkit-scrollbar-thumb {
+.detailScroll::-webkit-scrollbar-thumb {
   background: var(--wb-scroll-thumb);
   border-radius: 3px;
 }
 
-.detailOpen > .detail::-webkit-scrollbar-thumb:hover {
+.detailScroll::-webkit-scrollbar-thumb:hover {
   background: var(--wb-scroll-thumb-hover);
 }
 
 /* A corner appears when both bars are drawn; the section never scrolls sideways
    (`overflow-x: clip`), so this only exists to keep the theme from painting a
    square of its own there. */
-.detailOpen > .detail::-webkit-scrollbar-corner {
+.detailScroll::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -1330,13 +1368,23 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
  * That spacing lives on `.detailBody`, not here. `.detail` is the grid item that
  * folds to `0fr`; a padded grid item still stands as tall as its padding even
  * when the row is 0, so a collapsed card carried an 8px strip under its content.
- * The inner block is clipped with the rest, and the folded area really is 0. */
+ * The inner block is clipped with the rest, and the folded area really is 0.
+ *
+ * §9.44: the column is what pins the divider above the scroll block. `.detail`
+ * itself only clips; `.detailBody` fills the cap and hands the remaining height
+ * to `.detailScroll`. */
 .detail {
+  display: flex;
+  flex-direction: column;
   padding: 0;
 }
 
 /* The expanded area's own padding; see `.detail` above. */
 .detailBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 6px 0 2px;
 }
 
@@ -1379,8 +1427,11 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 .completionDivider {
   display: flex;
   align-items: center;
+  flex: none;
   gap: 8px;
-  margin: 0 0 12px;
+  /* The scroll block reserves a 6px gutter (§9.33); matching it here keeps the
+     divider's rules on the same right edge as the text below (§9.44). */
+  margin: 0 6px 12px 0;
   color: var(--wb-caption);
   font-size: 10px;
   font-weight: 500;
@@ -1451,17 +1502,34 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
   display: flex;
   gap: 7px;
   align-items: baseline;
+  min-width: 0;
 }
 
+/*
+ * Changed files read as two columns: the path owns a fixed fifth of the row and
+ * the purpose takes what is left. Before the fixed basis a long path claimed
+ * whatever it needed and squeezed the purpose to a sliver.
+ *
+ * The path itself is clipped, not wrapped — a path broken across lines is harder
+ * to scan than one cut by an ellipsis — and `FilePath` raises a tooltip with the
+ * full value only when this clip actually hides something.
+ */
 .filePath {
+  flex: 0 0 20%;
+  min-width: 0;
   color: var(--dsw-alias-label-primary);
   font-size: 10.5px;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .filePurpose {
+  flex: 1 1 0;
+  min-width: 0;
   color: var(--wb-tertiary);
   font-size: 10.5px;
+  overflow-wrap: anywhere;
 }
 
 .verifyCmd {
@@ -1603,8 +1671,8 @@ button[data-dockkit-tab-close='dsh-plugin-workbench/workbench'] {
 
   /* §9.33: the fold is instant here (`.detailWrap` above drops its transition),
      so the delayed hand-off to a scrolling area would only postpone the bar by
-     400ms for nothing. Hand it over now. */
-  .detailOpen > .detail {
+     400ms for nothing. Hand it over now. §9.44 moved the scroll to this block. */
+  .detailOpen > .detail .detailScroll {
     animation: none;
     overflow-y: auto;
   }

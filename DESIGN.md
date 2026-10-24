@@ -688,6 +688,66 @@ async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
 - 校验：`pnpm build` 通过，`pnpm test` 156 tests；3× headless 预览确认 16px 下
   齿边和镂空对勾仍可辨，深色主题下对勾透出卡片底色。
 
+## §9.43 修改文件：路径列固定五分之一，超出才出 Tooltip
+
+待办总结的「修改文件」里，路径原来会和用途抢宽度：路径越长，右侧的用途被挤得越窄，
+同一块里的两行也对不齐。
+
+- `.filePath` 改为固定 `flex: 0 0 20%`，即整行的五分之一；用途列 `flex: 1 1 0` 拿走
+  剩余宽度。路径不再换行，改为 `overflow: hidden` + `text-overflow: ellipsis`。
+- 只有真的被截断时才给完整路径：`FilePath` 用 `scrollWidth > clientWidth` 量，
+  变宽变窄（`ResizeObserver`）和路径变化时重新量；没截断则 `Tooltip` 保持 `disabled`，
+  不重复屏幕上的字。气泡走 `portal` + `side="top"`，避免被展开区的 `overflow` 裁掉。
+- `Tooltip` 取自 `@deepseek-ai/dsh-client-ui-primitives`；它本来就在 DSH 的平台模块表里，
+  客户端构建保持 external，运行时由 Shell 共享，不新增注入项。
+- 复验：`pnpm build` 通过，`node --test --test-isolation=none` 157 tests 通过；
+  `completion.spec.ts` 新增一条断言钉住 20% 列宽、省略号与「仅截断才出气泡」。
+
+## §9.44 待办总结上限再收 20%，分割线固定在滚动区之外
+
+待办总结展开后的最大高度从 `50cqh` 收到 `40cqh`（原来的 80%），并且滚动时
+「待办总结」那条分割线保持不动，只有它下方的总结内容滚动。
+
+- 上限仍挂在始终匹配的 `.detailWrap > .detail` 上（§9.27），折叠的起止高度不变。
+- `.detail` 改为纵向 flex：`.completionDivider` 是 `flex: none` 的固定项，后面新增
+  `.detailScroll` 才承担滚动（`flex: 1 1 auto; min-height: 0`）。分割线不在滚动容器里，
+  因此不会被第一屏内容带走。
+- §9.33 的延迟出条和 `scrollbar-gutter: stable` 一起搬到 `.detailScroll`；
+  `::-webkit-scrollbar` 选择器同步改到该块，滚动条仍只在折叠动画结束后出现。
+- 分割线右侧留 6px，与滚动区预留的滚动条槽对齐；`prefers-reduced-motion` 下仍立即
+  交出 `overflow-y: auto`，只是对象从 `.detail` 换成 `.detailScroll`。
+- 复验：`pnpm build` 通过，`node --test --test-isolation=none` 158 tests；
+  `motion.spec.ts` 新增一条结构断言（分割线先闭合、滚动块后打开）。
+
+## §9.45 待办列表滚动条内缩 6px
+
+待办列表的滚动条原先贴死面板的右边缘和底边缘，看起来像被裁掉的一条边。现在给
+`.scroller` 加 `margin: 0 6px 6px 0`，滚动条整体内缩 6px；同时把
+`padding` 从 `14px 14px 24px` 改为 `14px 8px 18px 14px`。
+
+- 右侧：`margin-right 6 + padding-right 8` 与原来的 `padding-right 14` 相等，
+  卡片的右缘不动；滚动条与卡片之间留 8px。
+- 底部：`margin-bottom 6 + padding-bottom 18` 与原来的 `padding-bottom 24` 相等，
+  最后一张卡片下方的留白不变，滚动条底端离面板底边 6px。
+- `scrollbar-gutter: stable` 和 `overflow: auto` 保持不变；`.scroller` 仍是 `40cqh`
+  的尺寸容器（高度少 6px，上限相应少约 2.4px）。
+- 复验：`pnpm build` 通过，`node --test --test-isolation=none` 159 tests；
+  新增 `scroller.spec.ts` 同时钉住 margin 和补偿后的 padding。
+
+## §9.46 列表上下边缘 14px / 18px 渐隐
+
+列表滚动时，卡片会在滚动区顶边和底边被硬边切断。`.scroller` 现在用
+`mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 18px), transparent 100%)`
+把两端渐隐到透明。
+
+- 渐隐长度直接取 top/bottom padding：静止时首尾卡片完全落在不透明区，不会被
+  蒙层压淡；只有滚动中的卡片会经过渐隐带。
+- 用 mask 而不是半透明渐变遮罩，是因为遮罩颜色必须猜侧栏的 fill token；mask
+  淡到透明，深浅主题都不需要额外变量。
+- 滚动条与内容同一层，顶端/底端的渐隐也覆盖滚动条两端。
+- 复验：`pnpm build` 通过，`node --test --test-isolation=none` 160 tests；
+  `scroller.spec.ts` 新增断言钉住渐隐停点与 padding 相等。
+
 ## §13.8 遗留欠账
 
 - `dsh.client.inject` 不一致：客户端源码 import 了

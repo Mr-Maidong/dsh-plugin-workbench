@@ -15,6 +15,7 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
+import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 // Type-only: merges `sessionId` into every session-scoped slot's standard props.
@@ -847,22 +848,27 @@ function Card({
                 whether or not a summary exists, so the section keeps its name and the
                 line does not appear and disappear with the content behind it. */}
             <div className={css.completionDivider}>{t('completion.title')}</div>
-            {item.completion === undefined
-              ? <CompletionEmpty t={t} />
-              : <Completion item={item} t={t} />}
-            {/* §9.19: the write-back's next step, in the control's own words. It
-                is drawn while the write-back is still pending, while it is queued
-                and while it is running — but no longer for a finished card
-                (§9.25): its status word and completion record already say
-                everything that narration would repeat. Nor for an idle open item
-                (§9.31.9): "写回后本条自动完结" explained a rule that the empty icon
-                above it already implies, and it sat under every untouched card's
-                expanded area as the only thing there. */}
-            {(pending || item.status === 'in_progress') && (
-              <p className={css.detailHint}>
-                {t(pending ? 'writeback.pending' : 'writeback.hintRunning')}
-              </p>
-            )}
+            {/* The divider is the section's fixed edge, so only what follows it
+                scrolls (DESIGN.md §9.44); the scrollbar belongs to this block,
+                not to the whole expanded area. */}
+            <div className={css.detailScroll}>
+              {item.completion === undefined
+                ? <CompletionEmpty t={t} />
+                : <Completion item={item} t={t} />}
+              {/* §9.19: the write-back's next step, in the control's own words. It
+                  is drawn while the write-back is still pending, while it is queued
+                  and while it is running — but no longer for a finished card
+                  (§9.25): its status word and completion record already say
+                  everything that narration would repeat. Nor for an idle open item
+                  (§9.31.9): "写回后本条自动完结" explained a rule that the empty icon
+                  above it already implies, and it sat under every untouched card's
+                  expanded area as the only thing there. */}
+              {(pending || item.status === 'in_progress') && (
+                <p className={css.detailHint}>
+                  {t(pending ? 'writeback.pending' : 'writeback.hintRunning')}
+                </p>
+              )}
+            </div>
             {/* The prototype's `.detailBar` is gone (§9.31): its only control was
                 delete, which moved out of the expanded area entirely once
                 archiving replaced it. The empty region stays declared so the fold
@@ -894,6 +900,41 @@ function CompletionEmpty({ t }: { readonly t: CardProps['t'] }): ReactNode {
   )
 }
 
+/**
+ * One changed-file path, held to the column `.filePath` declares.
+ *
+ * The column is a fifth of the row, so the purpose beside it keeps the rest and
+ * a deep path cannot push it out of the card. Paths do not wrap — a path split
+ * across two lines is harder to scan than one cut by an ellipsis — which means
+ * the full value has to stay reachable: hovering opens it, but only when the
+ * clip actually hides something. A short path that already fits gets no bubble
+ * repeating what is on screen.
+ */
+function FilePath({ path }: { readonly path: string }): ReactNode {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [clipped, setClipped] = useState(false)
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (element === null) return
+    const measure = (): void => {
+      setClipped(element.scrollWidth > element.clientWidth + 1)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure)
+      return () => window.removeEventListener('resize', measure)
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [path])
+  return (
+    <Tooltip label={path} side="top" portal maxWidth={360} disabled={!clipped}>
+      <span ref={ref} className={css.filePath}>{path}</span>
+    </Tooltip>
+  )
+}
+
 /** The structured write-back summary, once one exists. */
 function Completion({ item, t }: { readonly item: WorkItemRecord; readonly t: CardProps['t'] }): ReactNode {
   const completion = item.completion
@@ -919,7 +960,7 @@ function Completion({ item, t }: { readonly item: WorkItemRecord; readonly t: Ca
           <ul className={css.completionList}>
             {completion.changedFiles.map(file => (
               <li key={file.path} className={css.completionRow}>
-                <span className={css.filePath}>{file.path}</span>
+                <FilePath path={file.path} />
                 <span className={css.filePurpose}>{file.purpose}</span>
               </li>
             ))}

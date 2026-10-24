@@ -100,8 +100,24 @@ describe('the card animates its height and its disclosure control', () => {
     // with the class at the closing instant, and the row's interpolated start
     // point jumps to the uncapped content height — the card grows a beat before
     // it folds, and the list scrollbar flickers.
-    assert.equal(rule('.detailWrap > .detail')['max-height'], '50cqh')
+    // §9.44: 80% of the former 50cqh cap.
+    assert.equal(rule('.detailWrap > .detail')['max-height'], '40cqh')
     assert.ok(!('max-height' in rule('.detailOpen > .detail')), 'the cap must not leave with the class')
+  })
+
+  it('keeps the divider fixed while only the content below it scrolls (§9.44)', () => {
+    // The divider sits above the scroll block in the markup, and the scroll
+    // container is the inner block alone. If the rule and the summary ever share
+    // a scroll container again, the line scrolls away with the first screenful.
+    const divider = markup.indexOf('<div className={css.completionDivider}>')
+    const dividerClose = markup.indexOf('</div>', divider)
+    const scroll = markup.indexOf('<div className={css.detailScroll}>')
+    assert.ok(divider >= 0 && scroll > divider, 'the scroll block starts after the divider')
+    assert.ok(dividerClose > divider && dividerClose < scroll, 'the divider closes before the scroll block opens')
+    assert.equal(rule('.detailScroll')['overflow-x'], 'clip')
+    assert.equal(rule('.detailScroll')['overflow-y'], 'hidden')
+    assert.equal(rule('.completionDivider')['flex'], 'none')
+    assert.ok(!('overflow-y' in rule('.detailOpen > .detail')), 'the whole detail no longer scrolls')
   })
 
   it('folds to zero: the region padding lives inside, not on the grid item', () => {

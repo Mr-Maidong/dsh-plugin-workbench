@@ -100,16 +100,20 @@ function card({ status = 'open', title, desc, tag = '', time = '刚刚', archive
     </div>
     <div class="${cls(open ? ['detailWrap', 'detailOpen'] : ['detailWrap'])}">
       <div class="${cls('detail')}">
-        <div class="${cls('completionDivider')}">待办总结</div>
-        ${empty
+        <div class="${cls('detailBody')}">
+          <div class="${cls('completionDivider')}">待办总结</div>
+          <div class="${cls('detailScroll')}">
+            ${empty
     ? `<div class="${cls('detailEmpty')}">${icon.empty}</div>`
     : `${long
       ? Array.from({ length: 9 }, (_, i) => `<p class="${cls('completionSummary')}">${i + 1}. 这一段只是把摘要撑到超过展开区的限高，用来看滚动条是不是一直在。</p>`).join('')
       : `<p class="${cls('completionSummary')}">整理官网改版的需求边界，输出方案初稿：信息架构、页面清单与两周排期。</p>`}
-        <div class="${cls('completionBlock')}">
-          <p class="${cls('completionBlockTitle')}">实现路径</p>
-          <ol class="${cls('completionSteps')}"><li>梳理现有导航与页面清单</li><li>产出方案初稿并评审</li></ol>
-        </div>`}
+            <div class="${cls('completionBlock')}">
+              <p class="${cls('completionBlockTitle')}">实现路径</p>
+              <ol class="${cls('completionSteps')}"><li>梳理现有导航与页面清单</li><li>产出方案初稿并评审</li></ol>
+            </div>`}
+          </div>
+        </div>
       </div>
     </div>
   </li>`

@@ -15,6 +15,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * the Host does not have.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 import { seedText } from "./seed.js";
 import { workspaceOfSession } from "./workspace-source.js";
 import css from './WorkbenchTab.module.css';
@@ -359,9 +360,9 @@ function Card({ item, t, editing, open, pending = false, onEdit, onCommit, onCan
                                         ? (_jsx(InlineField, { className: `${css.field} ${css.fieldTag}`, value: draftOf('tag'), placeholder: t('card.noTag'), multiline: false, onChange: draft => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft }); }, onCommit: draft => { onCommit('tag', draft); }, onCancel: onCancel }))
                                         : (_jsx("button", { type: "button", className: item.tag === '' ? `${css.tag} ${css.tagEmpty}` : css.tag, onClick: () => { onEdit({ kind: 'field', id: item.id, field: 'tag', draft: item.tag }); }, children: item.tag === '' ? t('card.noTag') : item.tag })), _jsx("span", { className: css.metaSpacer }), _jsx("span", { className: css.time, children: relative(item.updateAt, t('card.justNow')) })] }), _jsxs("div", { className: css.cardFoot, children: [onFill !== undefined && (_jsxs("button", { type: "button", className: css.primaryBtn, title: t('card.fillTitle'), "aria-label": t('card.fillTitle'), onClick: onFill, children: [_jsx(SendGlyph, {}), _jsx("span", { children: t('card.fill') })] })), item.status !== 'done' && (_jsxs("button", { type: "button", className: pending
                                             ? `${css.ghostBtn} ${css.ghostBtnPending}`
-                                            : item.status === 'in_progress' ? `${css.ghostBtn} ${css.ghostBtnBusy}` : css.ghostBtn, title: t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), "aria-label": t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), disabled: pending, onClick: onRequestComplete, children: [_jsx(SummaryGlyph, {}), _jsx("span", { children: t('card.summarize') })] })), _jsx("span", { className: css.footSpacer }), _jsxs("button", { type: "button", className: item.archived ? `${css.archiveBtn} ${css.archiveBtnOn}` : css.archiveBtn, title: t(item.archived ? 'card.unarchive' : 'card.archive'), "aria-label": t(item.archived ? 'card.unarchive' : 'card.archive'), onClick: onArchive, children: [_jsx(ArchiveGlyph, {}), _jsx("span", { children: t(item.archived ? 'card.unarchive' : 'card.archive') })] }), _jsx("span", { className: css.cardActions, children: _jsxs("button", { type: "button", className: open ? `${css.chevron} ${css.chevronOpen}` : css.chevron, title: open ? t('card.collapse') : t('card.expand'), "aria-label": open ? t('card.collapseDetails') : t('card.expandDetails'), "aria-expanded": open, onClick: onToggle, children: [_jsx(ChevronGlyph, {}), _jsx("span", { children: open ? t('card.collapseDetails') : t('card.expandDetails') })] }) })] })] })] }), _jsx("div", { className: open ? `${css.detailWrap} ${css.detailOpen}` : css.detailWrap, children: _jsx("div", { className: css.detail, children: _jsxs("div", { className: css.detailBody, children: [_jsx("div", { className: css.completionDivider, children: t('completion.title') }), item.completion === undefined
-                                ? _jsx(CompletionEmpty, { t: t })
-                                : _jsx(Completion, { item: item, t: t }), (pending || item.status === 'in_progress') && (_jsx("p", { className: css.detailHint, children: t(pending ? 'writeback.pending' : 'writeback.hintRunning') }))] }) }) })] }));
+                                            : item.status === 'in_progress' ? `${css.ghostBtn} ${css.ghostBtnBusy}` : css.ghostBtn, title: t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), "aria-label": t(pending ? 'writeback.pending' : item.status === 'in_progress' ? 'writeback.retry' : 'writeback.request'), disabled: pending, onClick: onRequestComplete, children: [_jsx(SummaryGlyph, {}), _jsx("span", { children: t('card.summarize') })] })), _jsx("span", { className: css.footSpacer }), _jsxs("button", { type: "button", className: item.archived ? `${css.archiveBtn} ${css.archiveBtnOn}` : css.archiveBtn, title: t(item.archived ? 'card.unarchive' : 'card.archive'), "aria-label": t(item.archived ? 'card.unarchive' : 'card.archive'), onClick: onArchive, children: [_jsx(ArchiveGlyph, {}), _jsx("span", { children: t(item.archived ? 'card.unarchive' : 'card.archive') })] }), _jsx("span", { className: css.cardActions, children: _jsxs("button", { type: "button", className: open ? `${css.chevron} ${css.chevronOpen}` : css.chevron, title: open ? t('card.collapse') : t('card.expand'), "aria-label": open ? t('card.collapseDetails') : t('card.expandDetails'), "aria-expanded": open, onClick: onToggle, children: [_jsx(ChevronGlyph, {}), _jsx("span", { children: open ? t('card.collapseDetails') : t('card.expandDetails') })] }) })] })] })] }), _jsx("div", { className: open ? `${css.detailWrap} ${css.detailOpen}` : css.detailWrap, children: _jsx("div", { className: css.detail, children: _jsxs("div", { className: css.detailBody, children: [_jsx("div", { className: css.completionDivider, children: t('completion.title') }), _jsxs("div", { className: css.detailScroll, children: [item.completion === undefined
+                                        ? _jsx(CompletionEmpty, { t: t })
+                                        : _jsx(Completion, { item: item, t: t }), (pending || item.status === 'in_progress') && (_jsx("p", { className: css.detailHint, children: t(pending ? 'writeback.pending' : 'writeback.hintRunning') }))] })] }) }) })] }));
 }
 /**
  * The expanded area with nothing written back yet (§9.31).
@@ -373,12 +374,43 @@ function Card({ item, t, editing, open, pending = false, onEdit, onCommit, onCan
 function CompletionEmpty({ t }) {
     return (_jsx("div", { className: css.detailEmpty, role: "img", "aria-label": t('detail.noCompletion'), children: _jsxs("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "3", y: "4.5", width: "18", height: "15", rx: "4", stroke: "currentColor", strokeWidth: "1.3" }), _jsx("path", { d: "M3 9.5h18M7.5 14h7", stroke: "currentColor", strokeWidth: "1.3", strokeLinecap: "round" })] }) }));
 }
+/**
+ * One changed-file path, held to the column `.filePath` declares.
+ *
+ * The column is a fifth of the row, so the purpose beside it keeps the rest and
+ * a deep path cannot push it out of the card. Paths do not wrap — a path split
+ * across two lines is harder to scan than one cut by an ellipsis — which means
+ * the full value has to stay reachable: hovering opens it, but only when the
+ * clip actually hides something. A short path that already fits gets no bubble
+ * repeating what is on screen.
+ */
+function FilePath({ path }) {
+    const ref = useRef(null);
+    const [clipped, setClipped] = useState(false);
+    useLayoutEffect(() => {
+        const element = ref.current;
+        if (element === null)
+            return;
+        const measure = () => {
+            setClipped(element.scrollWidth > element.clientWidth + 1);
+        };
+        measure();
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', measure);
+            return () => window.removeEventListener('resize', measure);
+        }
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [path]);
+    return (_jsx(Tooltip, { label: path, side: "top", portal: true, maxWidth: 360, disabled: !clipped, children: _jsx("span", { ref: ref, className: css.filePath, children: path }) }));
+}
 /** The structured write-back summary, once one exists. */
 function Completion({ item, t }) {
     const completion = item.completion;
     if (completion === undefined)
         return null;
-    return (_jsxs(_Fragment, { children: [_jsx("p", { className: css.completionSummary, children: completion.summary }), _jsxs("div", { className: css.completionBlock, children: [_jsx("p", { className: css.completionBlockTitle, children: t('completion.implementationPath') }), _jsx("ol", { className: css.completionSteps, children: completion.implementationPath.map((step, index) => (_jsx("li", { children: step }, `${String(index)}:${step}`))) })] }), completion.changedFiles.length > 0 && (_jsxs("div", { className: css.completionBlock, children: [_jsx("p", { className: css.completionBlockTitle, children: t('completion.changedFiles') }), _jsx("ul", { className: css.completionList, children: completion.changedFiles.map(file => (_jsxs("li", { className: css.completionRow, children: [_jsx("span", { className: css.filePath, children: file.path }), _jsx("span", { className: css.filePurpose, children: file.purpose })] }, file.path))) })] })), completion.verification !== undefined && completion.verification.length > 0 && (_jsxs("div", { className: css.completionBlock, children: [_jsx("p", { className: css.completionBlockTitle, children: t('completion.verification') }), _jsx("ul", { className: css.completionList, children: completion.verification.map(entry => (_jsxs("li", { className: css.completionRow, children: [_jsx("span", { className: css.verifyCmd, children: entry.command }), _jsx("span", { className: `${css.verifyResult} ${entry.result === 'passed' ? css.verifyPassed : entry.result === 'failed' ? css.verifyFailed : css.verifySkipped}`, children: t(`verify.${entry.result}`) }), entry.note !== undefined && entry.note !== '' && (_jsx("span", { className: css.filePurpose, children: entry.note }))] }, entry.command))) })] })), completion.completedBy !== 'model' && (_jsx("p", { className: css.completionBy, children: t('completion.by', { who: t(`writer.${completion.completedBy}`) }) }))] }));
+    return (_jsxs(_Fragment, { children: [_jsx("p", { className: css.completionSummary, children: completion.summary }), _jsxs("div", { className: css.completionBlock, children: [_jsx("p", { className: css.completionBlockTitle, children: t('completion.implementationPath') }), _jsx("ol", { className: css.completionSteps, children: completion.implementationPath.map((step, index) => (_jsx("li", { children: step }, `${String(index)}:${step}`))) })] }), completion.changedFiles.length > 0 && (_jsxs("div", { className: css.completionBlock, children: [_jsx("p", { className: css.completionBlockTitle, children: t('completion.changedFiles') }), _jsx("ul", { className: css.completionList, children: completion.changedFiles.map(file => (_jsxs("li", { className: css.completionRow, children: [_jsx(FilePath, { path: file.path }), _jsx("span", { className: css.filePurpose, children: file.purpose })] }, file.path))) })] })), completion.verification !== undefined && completion.verification.length > 0 && (_jsxs("div", { className: css.completionBlock, children: [_jsx("p", { className: css.completionBlockTitle, children: t('completion.verification') }), _jsx("ul", { className: css.completionList, children: completion.verification.map(entry => (_jsxs("li", { className: css.completionRow, children: [_jsx("span", { className: css.verifyCmd, children: entry.command }), _jsx("span", { className: `${css.verifyResult} ${entry.result === 'passed' ? css.verifyPassed : entry.result === 'failed' ? css.verifyFailed : css.verifySkipped}`, children: t(`verify.${entry.result}`) }), entry.note !== undefined && entry.note !== '' && (_jsx("span", { className: css.filePurpose, children: entry.note }))] }, entry.command))) })] })), completion.completedBy !== 'model' && (_jsx("p", { className: css.completionBy, children: t('completion.by', { who: t(`writer.${completion.completedBy}`) }) }))] }));
 }
 /**
  * A field that is always in edit state: it autofocuses, commits on blur, and

@@ -22,6 +22,7 @@ import css from './WorkbenchTab.module.css';
 import emptyArt from './assets/empty.webp';
 import doneMark from './assets/mark-done.webp';
 import todoMark from './assets/mark-todo.webp';
+import tabIcon from './assets/tab-icon.webp';
 /** One formatter for the module; constructing one per render is the slow path. */
 const RELATIVE = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 /**
@@ -495,12 +496,16 @@ function Composer({ t, onCommit, onCancel }) {
     const [title, setTitle] = useState('');
     return (_jsxs(_Fragment, { children: [_jsx(InlineField, { className: `${css.field} ${css.fieldTitle}`, value: title, placeholder: t('edit.titlePlaceholder'), multiline: false, onChange: setTitle, onCommit: onCommit, onCancel: onCancel }), _jsx("p", { className: css.editHint, children: t('edit.hint') })] }));
 }
-/** Render the workbench tab's chip title: a checklist glyph before the label. */
+/**
+ * Render the workbench tab's chip title: the workbench mark before the label.
+ *
+ * §9.47: the mark is full-colour artwork (the layered workbench cards), so it
+ * is drawn as an ordinary image rather than through the status marks' alpha
+ * mask — a mask would recolour it with the chip's text colour and lose the
+ * gradient. The box is sized and aligned in `.titleIcon`.
+ */
 export function WorkbenchTabTitle(props) {
-    return (_jsxs(_Fragment, { children: [_jsx(ChecklistGlyph, { className: css.titleIcon }), props.t('tab.title')] }));
-}
-function ChecklistGlyph({ className }) {
-    return (_jsxs("svg", { className: className, width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("rect", { x: "2", y: "2.5", width: "4", height: "4", rx: "1", stroke: "currentColor", strokeWidth: "1.2" }), _jsx("rect", { x: "2", y: "9.5", width: "4", height: "4", rx: "1", stroke: "currentColor", strokeWidth: "1.2" }), _jsx("path", { d: "M8.5 4.5h5.5M8.5 11.5h5.5", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" })] }));
+    return (_jsxs(_Fragment, { children: [_jsx("span", { className: css.titleIcon, style: { backgroundImage: `url(${tabIcon})` }, "aria-hidden": "true" }), props.t('tab.title')] }));
 }
 function SearchGlyph() {
     return (_jsxs("svg", { width: "13", height: "13", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: [_jsx("circle", { cx: "7", cy: "7", r: "4.5", stroke: "currentColor", strokeWidth: "1.4" }), _jsx("path", { d: "M10.5 10.5 14 14", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" })] }));

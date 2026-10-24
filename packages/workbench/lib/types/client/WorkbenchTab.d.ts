@@ -72,7 +72,14 @@ export interface ComposerInputActions {
 export declare function WorkbenchTab(props: WorkbenchTabProps): import("react").JSX.Element;
 /** Props the title slot delivers; the chip is the plugin's label. */
 export type WorkbenchTabTitleProps = InjectFace<WorkbenchInjected> & PropsLocale<'workbench'>;
-/** Render the workbench tab's chip title: a checklist glyph before the label. */
+/**
+ * Render the workbench tab's chip title: the workbench mark before the label.
+ *
+ * §9.47: the mark is full-colour artwork (the layered workbench cards), so it
+ * is drawn as an ordinary image rather than through the status marks' alpha
+ * mask — a mask would recolour it with the chip's text colour and lose the
+ * gradient. The box is sized and aligned in `.titleIcon`.
+ */
 export declare function WorkbenchTabTitle(props: WorkbenchTabTitleProps): ReactNode;
 export type { WorkbenchSnapshot, WorkbenchFilterTier };
 //# sourceMappingURL=WorkbenchTab.d.ts.map

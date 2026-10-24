@@ -22,3 +22,9 @@ dist/
 .acl-reports/
 repro/card-preview.html
 repro/*.png
+
+# Icon design scratch: `repro/icon/*.py` are the scripts that pick and build the
+# tab mark, but the raw renders and the contact sheets they write are working
+# material. The asset that ships is committed under src/client/assets.
+repro/icon/image2_out/
+repro/icon/*.png

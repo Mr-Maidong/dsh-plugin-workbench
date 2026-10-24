@@ -31,6 +31,7 @@ import css from './WorkbenchTab.module.css'
 import emptyArt from './assets/empty.webp'
 import doneMark from './assets/mark-done.webp'
 import todoMark from './assets/mark-todo.webp'
+import tabIcon from './assets/tab-icon.webp'
 
 /** What the slot's inject face supplies to the body. */
 export interface WorkbenchInjected {
@@ -1120,23 +1121,24 @@ function Composer({ t, onCommit, onCancel }: {
 /** Props the title slot delivers; the chip is the plugin's label. */
 export type WorkbenchTabTitleProps = InjectFace<WorkbenchInjected> & PropsLocale<'workbench'>
 
-/** Render the workbench tab's chip title: a checklist glyph before the label. */
+/**
+ * Render the workbench tab's chip title: the workbench mark before the label.
+ *
+ * §9.47: the mark is full-colour artwork (the layered workbench cards), so it
+ * is drawn as an ordinary image rather than through the status marks' alpha
+ * mask — a mask would recolour it with the chip's text colour and lose the
+ * gradient. The box is sized and aligned in `.titleIcon`.
+ */
 export function WorkbenchTabTitle(props: WorkbenchTabTitleProps): ReactNode {
   return (
     <>
-      <ChecklistGlyph className={css.titleIcon} />
+      <span
+        className={css.titleIcon}
+        style={{ backgroundImage: `url(${tabIcon})` }}
+        aria-hidden="true"
+      />
       {props.t('tab.title')}
     </>
-  )
-}
-
-function ChecklistGlyph({ className }: { className?: string | undefined }): ReactNode {
-  return (
-    <svg className={className} width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="2" y="2.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
-      <rect x="2" y="9.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M8.5 4.5h5.5M8.5 11.5h5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
   )
 }
 

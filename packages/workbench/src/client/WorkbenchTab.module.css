@@ -235,16 +235,14 @@
  * `currentColor`; a mask would repaint the gradient with the chip's text
  * colour. The box is 16px: the 14px the old inline glyph drew at read small,
  * and the chip's line box still holds it. The lowered vertical align keeps
- * the mark's optical centre where the 14px box had it. The margin is 4px, not
- * the 6px the SVG ate: the artwork is inset to 80%, so its own air (~1.6px a
- * side at 16px) already adds to the gap.
+ * the mark's optical centre where the 14px box had it. No margin: the tab's
+ * own gap already space the mark off the label.
  */
 .titleIcon {
   flex: none;
   display: inline-block;
   width: 16px;
   height: 16px;
-  margin-right: 4px;
   vertical-align: -3px;
   background-repeat: no-repeat;
   background-position: center;

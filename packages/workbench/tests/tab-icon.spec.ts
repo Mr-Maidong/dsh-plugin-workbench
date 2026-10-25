@@ -50,12 +50,13 @@ describe('the tab chip mark', () => {
     assert.ok(!icon['mask-size'] && !icon['-webkit-mask-size'], 'the colour mark must not be masked')
     // The box is 16px - the 14px the old glyph drew at read small - and the
     // lowered vertical align keeps the mark's optical centre where that 14px
-    // box had it. The mark is inline so it sits on the label's baseline rather
-    // than in a flex row of its own.
+    // box had it. No margin of its own: the tab lays the mark and label apart
+    // with its own gap, and the mark is inline so it sits on the label's
+    // baseline rather than in a flex row of its own.
     assert.equal(icon.width, '16px')
     assert.equal(icon.height, '16px')
     assert.equal(icon.display, 'inline-block')
-    assert.equal(icon['margin-right'], '4px')
+    assert.ok(!icon['margin-right'], 'the chip has a gap; the mark adds no margin of its own')
     assert.equal(icon['vertical-align'], '-3px')
   })
 

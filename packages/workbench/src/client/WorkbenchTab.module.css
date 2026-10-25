@@ -234,14 +234,16 @@
  * it is a plain `background-image` set from the component — no alpha mask, no
  * `currentColor`; a mask would repaint the gradient with the chip's text
  * colour. The box stays at the 14px the old inline glyph drew at, so the
- * chip's line box does not move.
+ * chip's line box does not move. The margin is 4px, not the 6px the SVG ate:
+ * the artwork is inset to 80%, so its own air (~1.4px a side) already adds to
+ * the gap the way the old glyph's 11/16 ink stopped short (~0.9px).
  */
 .titleIcon {
   flex: none;
   display: inline-block;
   width: 14px;
   height: 14px;
-  margin-right: 6px;
+  margin-right: 4px;
   vertical-align: -2px;
   background-repeat: no-repeat;
   background-position: center;

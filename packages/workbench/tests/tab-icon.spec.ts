@@ -54,7 +54,7 @@ describe('the tab chip mark', () => {
     assert.equal(icon.width, '14px')
     assert.equal(icon.height, '14px')
     assert.equal(icon.display, 'inline-block')
-    assert.equal(icon['margin-right'], '6px')
+    assert.equal(icon['margin-right'], '4px')
     assert.equal(icon['vertical-align'], '-2px')
   })
 

@@ -766,8 +766,10 @@ async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
 - 接入：**不用**状态标记那套 alpha mask（§9.42）——mask 会把图重染成
   `currentColor`，渐变就没了。改为组件里直接
   `style={{ backgroundImage: \`url(${tabIcon})\` }}`，`.titleIcon` 只负责
-  14×14、contain、居中、`margin-right: 6px`、`vertical-align: -2px`（与旧 SVG
-  同框，行盒不动）。颜色固定意味着不再跟随页签的悬停/选中色，这是全彩方案的代价。
+  14×14、contain、居中、`margin-right: 4px`、`vertical-align: -2px`（与旧 SVG
+  同框，行盒不动；间距比旧 SVG 的 6px 收 2px——素材内缩 20%，自带的空气一侧
+  约 1.4px，比旧字形墨迹到边的 0.9px 多）。颜色固定意味着不再跟随页签的
+  悬停/选中色，这是全彩方案的代价。
 - 选型：第一轮 12 个单色候选（回形板、清单、看板、笔记本、印章等）在 14px 对照表
   里，看板 / 笔记本 / 印章糊成团，印章又和卡片里已有的「完成」印章撞脸，选了回形板；
   第二轮改全彩「应用图标」式，4 个候选出齐后用户点名层叠卡片，再出 3 个 1:1 版本
@@ -775,6 +777,7 @@ async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
 - 复验：`pnpm build` 通过，`node --test --test-isolation=none` 163 tests；
   另用脚本把**成品素材**（不是 1254px 原图）在 14 / 20 / 28 / 42px、浅深两色下
   各渲染一遍确认可辨；`tab-icon.spec.ts` 钉住 background-image 契约与素材文件。
+
 ## §13.8 遗留欠账
 
 - `dsh.client.inject` 不一致：客户端源码 import 了

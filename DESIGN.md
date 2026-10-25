@@ -683,8 +683,9 @@ async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
 - 接入：两张图都只当 alpha mask（`mask-image` + `background: currentColor`），
   墨色仍由主题令牌给——未完成取 idle ink，完成取 accent，所以浅色 / 深色、归档
   55% 透明都能自动适配。标记槽仍是 20px，图形 16px，四周各留 2px。
-- 已完成不再叠 `--wb-accent-soft` 光晕：徽章本身已是实心图形。进行中与新建
-  卡片仍保留原来的绿点 + 光晕（进行中没有对应的设计图）。
+- 已完成不再叠 `--wb-accent-soft` 光晕：徽章本身已是实心图形。进行中仍保留原来的
+  绿点 + 光晕（进行中没有对应的设计图）；新建卡片原先也借用这个绿点，§9.48 已改为
+  与未完成项同一枚印章。
 - 校验：`pnpm build` 通过，`pnpm test` 156 tests；3× headless 预览确认 16px 下
   齿边和镂空对勾仍可辨，深色主题下对勾透出卡片底色。
 
@@ -777,6 +778,20 @@ async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
 - 复验：`pnpm build` 通过，`node --test --test-isolation=none` 163 tests；
   另用脚本把**成品素材**（不是 1254px 原图）在 14 / 20 / 28 / 42px、浅深两色下
   各渲染一遍确认可辨；`tab-icon.spec.ts` 钉住 background-image 契约与素材文件。
+
+## §9.48 新建待办的标记改用未完成印章
+
+新建卡片（`editing.kind === 'create'`）标题前原先借用了进行中的绿点 + 光晕，于是
+一张还没保存的待办看起来像"正在跑"，和列表里其它未完成项的印章也对不上。
+
+- 改为与未完成项同一枚印章：`.mark` + `.markGlyph` + `glyphMask(todoMark)`，
+  墨色仍由 `.mark` 的 `--dsw-alias-state-idle-primary` 给。
+- 不再挂 `.markBusy`：那是进行中的光晕，新建卡片"正在编辑"这件事已经由
+  `.cardComposing` 的强调色描边说明，两处都喊反而互相干扰。
+- 进行中的绿点 + 光晕保持不变（§9.42），它仍是唯一没有对应设计图的状态。
+- 复验：`pnpm build` 通过，`node --test --test-isolation=none` 164 tests；
+  `mark-art.spec.ts` 新增一条断言，切出新建卡片那段 JSX，钉住它有 `todoMark`
+  且没有 `markDot` / `markBusy`。
 
 ## §13.8 遗留欠账
 

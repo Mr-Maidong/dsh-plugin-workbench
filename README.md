@@ -88,7 +88,7 @@ they travel with the workspace and never leak across workspaces.
 ```bash
 pnpm install
 pnpm build          # tsc + tsdown for the Host half and the browser half
-pnpm test           # 163 tests / 33 suites on Node's built-in runner
+pnpm test           # 164 tests / 33 suites on Node's built-in runner
 pnpm typecheck
 ```
 

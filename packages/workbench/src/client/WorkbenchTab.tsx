@@ -489,8 +489,12 @@ export function WorkbenchTab(props: WorkbenchTabProps) {
               <ul className={css.list}>
                 <li className={`${css.card} ${css.cardComposing}`}>
                   <div className={css.cardHead}>
-                    <span className={`${css.mark} ${css.markBusy}`}>
-                      <span className={css.markDot} />
+                    {/* The composer leads with the same todo seal a saved item
+                        gets (§9.48): a new item is an open item, so it must not
+                        wear the in-progress dot the running state uses. The
+                        accent border alone says the card is being composed. */}
+                    <span className={css.mark}>
+                      <span className={css.markGlyph} style={glyphMask(todoMark)} />
                     </span>
                     <div className={css.cardBody}>
                       <Composer

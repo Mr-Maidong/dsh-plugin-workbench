@@ -62,6 +62,17 @@ describe('the generated status marks', () => {
     assert.ok(markup.includes('glyphMask(doneMark)'), 'the done seal must be masked')
     assert.ok(markup.includes('glyphMask(todoMark)'), 'the todo seal must be masked')
     assert.ok(markup.includes("item.status === 'in_progress'"), 'in progress keeps its CSS dot')
-    assert.ok(markup.includes("css.markBusy"), 'the composer still draws the busy mark')
+    assert.ok(markup.includes('css.markBusy'), 'the in-progress state keeps the busy halo')
+  })
+
+  it('leads the composer with the todo seal, not the busy dot', () => {
+    // §9.48: a card being composed is an open item, so it wears the same seal a
+    // saved open item wears. The dot belongs to the running state alone.
+    const at = markup.indexOf("editing.kind === 'create'")
+    assert.notEqual(at, -1, 'the composer card must be in the markup')
+    const composer = markup.slice(at, markup.indexOf('snapshot.items.length === 0', at))
+    assert.ok(composer.includes('glyphMask(todoMark)'), 'the composer must draw the todo seal')
+    assert.ok(!composer.includes('markDot'), 'the composer must not draw the busy dot')
+    assert.ok(!composer.includes('markBusy'), 'the composer must not wear the busy halo')
   })
 })

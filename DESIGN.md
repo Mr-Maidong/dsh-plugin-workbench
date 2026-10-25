@@ -766,10 +766,10 @@ async *watch(signal: AbortSignal): AsyncIterable<WorkbenchChange>
 - 接入：**不用**状态标记那套 alpha mask（§9.42）——mask 会把图重染成
   `currentColor`，渐变就没了。改为组件里直接
   `style={{ backgroundImage: \`url(${tabIcon})\` }}`，`.titleIcon` 只负责
-  14×14、contain、居中、`margin-right: 4px`、`vertical-align: -2px`（与旧 SVG
-  同框，行盒不动；间距比旧 SVG 的 6px 收 2px——素材内缩 20%，自带的空气一侧
-  约 1.4px，比旧字形墨迹到边的 0.9px 多）。颜色固定意味着不再跟随页签的
-  悬停/选中色，这是全彩方案的代价。
+  16×16、contain、居中、`margin-right: 4px`、`vertical-align: -3px`（14px 读着
+  偏小，放大到 16px；基线偏移从 -2px 改 -3px 是为了让图标的光学中心和 14px 框
+  时一致）。间距用 `margin-right: 4px`——素材内缩 20%，自带的空气一侧约 1.6px，
+  已补上旧 SVG 收窄的部分。颜色固定意味着不再跟随页签的悬停/选中色，这是全彩
 - 选型：第一轮 12 个单色候选（回形板、清单、看板、笔记本、印章等）在 14px 对照表
   里，看板 / 笔记本 / 印章糊成团，印章又和卡片里已有的「完成」印章撞脸，选了回形板；
   第二轮改全彩「应用图标」式，4 个候选出齐后用户点名层叠卡片，再出 3 个 1:1 版本

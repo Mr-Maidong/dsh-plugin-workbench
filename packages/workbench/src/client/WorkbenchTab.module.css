@@ -233,18 +233,19 @@
  * §9.47: the artwork keeps its own colours (the layered workbench cards), so
  * it is a plain `background-image` set from the component — no alpha mask, no
  * `currentColor`; a mask would repaint the gradient with the chip's text
- * colour. The box stays at the 14px the old inline glyph drew at, so the
- * chip's line box does not move. The margin is 4px, not the 6px the SVG ate:
- * the artwork is inset to 80%, so its own air (~1.4px a side) already adds to
- * the gap the way the old glyph's 11/16 ink stopped short (~0.9px).
+ * colour. The box is 16px: the 14px the old inline glyph drew at read small,
+ * and the chip's line box still holds it. The lowered vertical align keeps
+ * the mark's optical centre where the 14px box had it. The margin is 4px, not
+ * the 6px the SVG ate: the artwork is inset to 80%, so its own air (~1.6px a
+ * side at 16px) already adds to the gap.
  */
 .titleIcon {
   flex: none;
   display: inline-block;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   margin-right: 4px;
-  vertical-align: -2px;
+  vertical-align: -3px;
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
